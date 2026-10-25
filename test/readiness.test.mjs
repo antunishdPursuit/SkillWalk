@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {assessBrief} from '../src/readiness.mjs';import fs from 'node:fs';
+const valid=JSON.parse(fs.readFileSync(new URL('../examples/repair-cafe-brief.json',import.meta.url)));
+test('second complete brief is ready without inserting defaults',()=>{const before=JSON.stringify(valid);assert.deepEqual(assessBrief(valid),{ready:true,questions:[]});assert.equal(JSON.stringify(valid),before);});
+test('missing content and style require explicit answers',()=>{const b=structuredClone(valid);delete b.style;b.slides[2].facts=[];const result=assessBrief(b);assert.equal(result.ready,false);assert.deepEqual(result.questions.map(q=>q.field),['style','slides.2.facts']);assert.equal(b.style,undefined);assert.deepEqual(b.slides[2].facts,[]);});
+test('referenced files cannot silently be replaced by invented content',()=>{const b={...valid,requiredFiles:['repair-handout.pdf']};const result=assessBrief(b);assert.equal(result.ready,false);assert.match(result.questions[0].question,/repair-handout.pdf/);});
+test('unsupported style and slide count cannot be silently changed',()=>{assert.equal(assessBrief({...valid,style:'Neon',slideCount:7}).ready,false);});

@@ -1,0 +1,18 @@
+{
+  "name": "skillwalk-proof",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "acquire": "node src/acquire.mjs",
+    "proof": "node src/proof.mjs",
+    "verify": "node src/verify.mjs",
+    "repair": "node src/repair.mjs",
+    "start": "node src/server.mjs",
+    "setup:document": "node src/setup-document.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}

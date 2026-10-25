@@ -1,0 +1,45 @@
+{
+  "title": "Neighborhood Coding Night",
+  "purpose": "A short introductory community talk",
+  "audience": "Adults trying coding for the first time",
+  "density": "speaker-led",
+  "style": "Paper & Ink",
+  "slideCount": 5,
+  "slides": [
+    {
+      "title": "Neighborhood Coding Night",
+      "facts": [
+        "A friendly first step into coding."
+      ]
+    },
+    {
+      "title": "Who can join",
+      "facts": [
+        "Beginners are welcome.",
+        "Bring a laptop if you have one."
+      ]
+    },
+    {
+      "title": "What we will make",
+      "facts": [
+        "A simple personal introduction page.",
+        "No prior coding experience required."
+      ]
+    },
+    {
+      "title": "The evening",
+      "facts": [
+        "Welcome and introductions",
+        "Guided building time",
+        "Share what you made"
+      ]
+    },
+    {
+      "title": "Your next step",
+      "facts": [
+        "Ask the organizer how to join.",
+        "This is a fictional demonstration, not a real event."
+      ]
+    }
+  ]
+}

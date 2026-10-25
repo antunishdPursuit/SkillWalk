@@ -1,0 +1,22 @@
+import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs/promises';import path from'node:path';import{LocalRun}from'../src/ui-runner.mjs';import{executionInfo,stageFor,outputTarget,previewFiles,appendOperation,practiceFor}from'../src/workspace.mjs';import{sha256}from'../src/util.mjs';
+test('execution overview identifies the real distinct workflow and model roles',()=>{const deck=executionInfo('presentation',{text:'text-worker',vision:'vision-worker'}),site=executionInfo('website');assert.equal(deck.skill,'frontend-slides');assert.equal(site.skill,'frontend-design');assert.notEqual(deck.sourceId,site.sourceId);assert.equal(deck.model,'text-worker');assert.equal(deck.visionModel,'vision-worker');assert.equal(deck.tasks.length,3);assert.equal(site.tasks.length,3);assert.equal(stageFor({status:'testing',kind:'website',task:'initial'}),'draft');assert.equal(stageFor({status:'testing',kind:'website'}),'verify');assert.equal(outputTarget('website-with-linked-skill'),'website.html');assert.equal(outputTarget('vision-rendered-deck-review'),null);for(const n of ['../website.html','website-raw.html','brief.json','preview-other.html'])assert.equal(previewFiles.test(n),false);});
+test('preview is registered only after a complete file is saved and workspace evidence survives restore',async()=>{const run=new LocalRun('workspace-'+Date.now());await run.init();const safeRoot=path.resolve('.artifacts/experiments');assert.ok(run.dir.startsWith(safeRoot+path.sep));try{await assert.rejects(()=>run.registerPreview('../brief.json'),/Unsupported/);await assert.rejects(()=>run.registerPreview('presentation.html'),/ENOENT/);const html='<!doctype html><html><body>Actual saved file</body></html>';await fs.writeFile(path.join(run.dir,'output/presentation.html'),html);run.event('model-start',{name:'presentation',model:'local-gemma'});run.event('artifact-written',{artifact:'presentation.html'});await run.previewWork;assert.equal(run.previewArtifact.hash,sha256(html));assert.equal(run.currentOperation.target,'presentation.html');assert.ok(run.operations.some(e=>e.text.includes('Saved presentation.html')));run.browserActive=true;await run.saveWorkspace();const restored=new LocalRun(run.id);await restored.restoreWorkspace();assert.equal(restored.previewArtifact.hash,sha256(html));assert.ok(restored.operations.length>0);assert.equal(restored.browserActive,false);await fs.writeFile(path.join(run.dir,'output/presentation.html'),'changed');const stale=new LocalRun(run.id);await stale.restoreWorkspace();assert.equal(stale.previewArtifact,null);}finally{await fs.rm(run.dir,{recursive:true,force:true});}});
+
+test('failure retains the actual task and long check streams retain skill evidence',()=>{const run=new LocalRun('phase-test');run.state('analyzing','Reading the video');run.fail(Error('Controlled source failure'));assert.equal(stageFor(run),'source');let ops=[{type:'skill-reference',text:'Read pinned SKILL.md'}];for(let i=0;i<150;i++)ops=appendOperation(ops,{type:'check',text:'Check '+i});assert.ok(ops.length<=60);assert.ok(ops.some(x=>x.text==='Read pinned SKILL.md'));assert.equal(ops.at(-1).text,'Check 149');});
+
+test('practice is optional delivery guidance only, never a running or failed gate',()=>{
+ for(const status of ['new','analyzing','review','previewing','choosing','generating','testing','repairing','failed','stopped'])assert.equal(practiceFor({id:'demo',kind:'document',status}),null);
+ assert.equal(practiceFor(null),null);assert.equal(practiceFor({id:'demo',status:'complete',kind:'unsupported'}),null);
+ assert.equal(practiceFor({id:'demo',status:'complete',kind:'document',tutorialId:'different-source'}),null);
+});
+test('completed practice matches each retained tutorial and the exact checked download',()=>{
+ const expected={document:'hBDNv47KCKo',presentation:'372Iksaz8b0',website:'DVlHZufvP10'};
+ for(const[kind,id]of Object.entries(expected)){
+  const practice=practiceFor({id:'safe run & copy',status:'complete',kind,tutorialId:id});
+  assert.equal(practice.sourceURL,'https://www.youtube.com/watch?v='+id);
+  assert.equal(practice.downloadURL,'/api/result?id=safe%20run%20%26%20copy&download=1');
+  assert.equal(practice.steps.length,4);
+ }
+ assert.match(practiceFor({id:'one',status:'complete',kind:'document'}).steps.join(' '),/config.json/);
+ assert.doesNotMatch(practiceFor({id:'two',status:'complete',kind:'website'}).steps.join(' '),/PDF|Streamlit/);
+});

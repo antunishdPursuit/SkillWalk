@@ -1,0 +1,44 @@
+{
+  "title": "Fix It Together",
+  "purpose": "Introduce a fictional neighborhood repair cafe",
+  "audience": "First-time volunteer repair helpers",
+  "density": "speaker-led",
+  "style": "Paper & Ink",
+  "slideCount": 5,
+  "slides": [
+    {
+      "title": "Fix It Together",
+      "facts": [
+        "A small repair can keep a useful object in service."
+      ]
+    },
+    {
+      "title": "Start with simple repairs",
+      "facts": [
+        "Practice sewing a loose button.",
+        "Bring a torn fabric bag for practice."
+      ]
+    },
+    {
+      "title": "Know the boundary",
+      "facts": [
+        "Leave mains-powered electrical repairs to qualified professionals.",
+        "Ask before attempting any repair."
+      ]
+    },
+    {
+      "title": "Share the process",
+      "facts": [
+        "Explain what you tried.",
+        "Let the owner decide what happens next."
+      ]
+    },
+    {
+      "title": "Take one small step",
+      "facts": [
+        "Choose one simple repair to practice.",
+        "This is a fictional demonstration, not a scheduled event."
+      ]
+    }
+  ]
+}
