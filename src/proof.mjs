@@ -7,13 +7,15 @@ import {normalizeHTML,artifactIssues} from './artifact.mjs';
 
 const exec=promisify(execFile);const phase=process.argv[2]||'all';
 
-const E=await readJSON(path.join(artifacts,'source/evidence.json'));const briefFile=path.resolve(root,process.env.PROOF_BRIEF||'examples/workshop-brief.json');
+const briefFile=path.resolve(root,process.env.PROOF_BRIEF||'examples/workshop-brief.json');
 
 const brief=await readJSON(briefFile);
 
 const out=outputDir;await fs.mkdir(out,{recursive:true});
 
 const {assessBrief}=await import('./readiness.mjs');const readiness=assessBrief(brief);if(['all','generate','recover-generation'].includes(phase))await json(path.join(out,'readiness.json'),readiness);if(['all','generate','recover-generation'].includes(phase)&&!readiness.ready){console.log(JSON.stringify({status:'needs-input',...readiness}));process.exit(2);}
+
+const E=await readJSON(path.join(artifacts,'source/evidence.json'));
 
 const info=await checkModel();if(!info.capabilities?.includes('vision'))throw Error('A real vision-capable Gemma is required; no transcript-only fallback.');
 

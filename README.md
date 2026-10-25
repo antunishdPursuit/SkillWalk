@@ -92,7 +92,7 @@ Downloads are gated on checked hashes. Changed files cannot silently replace a v
 
 ## Verification
 
-Fast tests require Node.js and installed dependencies, without model calls:
+Fast tests require Node.js and installed dependencies, without model calls or a downloaded tutorial cache. HTTP and readiness tests create isolated, synthetic fixtures:
 
 ```powershell
 npm test
