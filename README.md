@@ -1,92 +1,122 @@
 # SkillWalk
 
-Give SkillWalk a reviewed YouTube tutorial, approve the plan, and watch it carry out the workflow with local Gemma. Real execution, browser tests and bounded repairs are visible. No paid model API or deployment.
+Watch a YouTube tutorial become a working local result. SkillWalk reads a reviewed video's captions, frames and source materials, prepares a plan with local Gemma, then runs the workflow, browser checks and bounded repairs.
+
+**Approve once, then watch.** The main tutorial builds a PDF question-answering app. Two alternatives create an HTML presentation or a homepage. There is no paid model API, account requirement or deployment.
+
+## Requirements
+
+The host is tested on **Windows with Node.js 24**. Document processing runs in Linux containers.
+
+- Node.js 24 and npm.
+- Docker Desktop running Linux containers.
+- Ollama running locally with `gemma3:4b` and `embeddinggemma`.
+- `yt-dlp.exe` and `ffmpeg.exe` available on PATH. Set `YTDLP_BIN` or `FFMPEG_BIN` to their executable paths if needed.
+- Internet access for initial packages, models, tutorial media and source downloads, and for the embedded YouTube player.
+
+Model weights and generated results are not included. Setup downloads large dependencies and extraction weights; allow several minutes and enough disk space. Inference speed and memory use depend on your hardware.
 
 ## Start locally
 
-You need Node.js 24, Docker Desktop with Linux containers, yt-dlp and FFmpeg, and working local Ollama services.
+Download or clone the project and open PowerShell in its folder. Start Docker Desktop and Ollama first. If Ollama is already running, use that service.
 
-This computer's verified profile uses:
-
-- Vision and document answers: `http://127.0.0.1:11435`, `gemma3:4b`.
-- Tutorial interpretation and preparation: `http://127.0.0.1:11434`, the local Gemma profile `local-gemma`.
-- Document embeddings: local `embeddinggemma` on port 11434.
-
-The model services must be running before setup. A normal Ollama service can host the models together; set the loopback environment variables below to match your installation. Hardware, model size and quantization affect quality and speed.
+For a single Ollama service on its usual local port:
 
 ```powershell
+ollama pull gemma3:4b
+ollama pull embeddinggemma
 npm ci
-$env:OLLAMA_BASE = 'http://127.0.0.1:11435'
+$env:OLLAMA_BASE = 'http://127.0.0.1:11434'
 $env:OLLAMA_TEXT_BASE = 'http://127.0.0.1:11434'
-$env:GEMMA_TEXT_MODEL = 'local-gemma'
+$env:GEMMA_TEXT_MODEL = 'gemma3:4b'
 $env:DOCUMENT_EMBEDDING_BASE = 'http://127.0.0.1:11434'
 npm run setup:document
 npm start
 ```
 
-Open [SkillWalk](http://127.0.0.1:4179/tutorial). Setup also prepares the version-matched Playwright default-deny sandbox profile and validates its pinned SHA-256 on download and reuse. Changed profiles fail explicitly; runtime never disables sandboxing to continue. The first setup builds a project-specific container and downloads local extraction weights and EmbeddingGemma if missing. It can take several minutes and uses substantial disk space. It does not install Hermes, change security policies or call a paid API.
+Open [SkillWalk](http://127.0.0.1:4179/tutorial). Stop the host with Ctrl+C.
 
-For a single local Ollama service, set both base URLs to that service and set `GEMMA_TEXT_MODEL` to an available Gemma model; `GEMMA_MODEL` selects the vision model. The document adapter currently requires `gemma3:4b` and `embeddinggemma` in those services. This alternate model configuration is not the verified profile above.
+The single-service configuration is supported by the code; the full end-to-end checks used a split profile: vision/answers with `gemma3:4b` on port 11435, and source interpretation with an existing Gemma alias `local-gemma`, plus `embeddinggemma`, on port 11434. That alias is not shipped. To use an existing split installation, set `OLLAMA_BASE`, `OLLAMA_TEXT_BASE`, `GEMMA_TEXT_MODEL` and `DOCUMENT_EMBEDDING_BASE` accordingly. Results can differ between models and configurations.
 
-## Use it
+Setup builds `skillwalk-document:local` and prepares the version-matched, hash-verified browser sandbox profile. It fails explicitly if an existing profile has changed. It does not disable sandboxing or change Windows security policies. Later starts reuse the local runtime and caches.
 
-1. The document tutorial is selected initially. Preview and confirm the actual video.
-2. Gemma reads its real captions, video frames and pinned source materials. Review the proposed workflow, model differences and supplied sample.
-3. Execution has a disclosed ten-second approval countdown, with Pause and Start now. Hiding, leaving or reloading this pre-approval view pauses it.
-4. After approval, just watch. The full document workflow extracts PDF text, table and chart crops, asks Gemma to describe the images, embeds the content locally, retrieves evidence and answers automatic questions in the actual browser.
-5. After checks pass, explore the live local app or download its checked source. Optional questions or your own PDF are use of the delivered app, not required run steps.
+## Use SkillWalk
 
-After delivery, **Try it yourself** links to the original video and the checked source, with optional steps to repeat the workflow on your own material. It appears below the result and above execution details; it never blocks the automatic run. Changes made during practice are not re-tested automatically. The checked document environment is Linux inside local Docker; native Windows/macOS execution of the downloaded Python app has not been verified.
+1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Unreviewed videos can be previewed but cannot execute yet.
+2. Watch the source analysis, then review the plan, supplied sample and model differences. No writing or content upload is required for the demonstration.
+3. The execution overview has a disclosed ten-second approval countdown with **Pause** and **Start now**. Leaving, hiding or reloading this view pauses approval.
+4. After approval, execution continues without another required click, including if the viewer disconnects. Follow the actual browser activity, checks and repairs.
+5. When checks pass, explore the result or download its checked source. **Try it yourself** provides optional practice with the original tutorial.
 
-Stop remains available during execution. It prevents subsequent steps after the current operation finishes safely, including delivery after the final check. A Stop received after delivery returns an explicit already-finished response. Closing the viewer does not cancel approved work. Reconnect restores the current state, including a new run that replaces one still closing. Reopened pre-approval reviews stay paused. Failures and exhausted repair attempts are explicit.
+**Stop** prevents subsequent steps after the current operation finishes safely, including delivery after a final check. A request after completion returns an explicit already-finished response. Failed or interrupted runs are labelled; they do not become verified results.
 
-The presentation alternative has a seven-second optional direction window after its covers are checked. Doing nothing selects the recommendation on the server, including when the viewer is hidden or disconnected. Optional changes never become required clicks.
+The presentation workflow has a seven-second optional direction window. Doing nothing selects its checked recommendation on the server. Inline slide edits produce a separate copy that has **not** been re-tested.
 
-## Available tutorials
+## Reviewed tutorials
 
-**Main: [Multimodal document questioning](https://youtu.be/hBDNv47KCKo)** by Nariman Codes. It follows the MIT-licensed [source workflow](https://github.com/NarimanN2/ollama-playground/tree/bb2ae8d1d3665d725afd5db5df1823203002c15c/multi-modal-rag): Streamlit, unstructured HI_RES extraction, Gemma image/table descriptions, 1000-character chunks with 200 overlap, local embeddings, an in-memory vector store and retrieved-context answers. This adaptation retrieves up to eight chunks (rather than the default four) to reduce omissions across text and visual evidence; it does not guarantee that every relevant source is found.
+| Tutorial | Result | Scope |
+| --- | --- | --- |
+| [Multimodal PDF questions - Nariman Codes](https://youtu.be/hBDNv47KCKo) | Local Streamlit app | Main workflow: PDF extraction, Gemma image/table descriptions, embeddings, retrieval and answers |
+| [HTML presentations - Zara Zhang](https://youtu.be/372Iksaz8b0) | Five-slide HTML deck | Three cover previews, automatic selection, generation, browser tests, repairs and editing |
+| [Frontend design - AI Coding Daily](https://youtu.be/DVlHZufvP10) | Local HTML/CSS homepage | Initial page, reference-guided revision, desktop/mobile checks and repairs; no Laravel/PHP backend |
 
-The video demonstrates Gemma 3 27B; this machine uses Gemma 3 4B. EmbeddingGemma replaces the video's llama3.2 because the installed llama3.2 backend does not support embeddings; the creator explicitly permits another embedding model. The original sample PDF is not included in the repository, so SkillWalk supplies a labelled synthetic table-and-chart worksheet. It is not current population research. Image descriptions are model-derived and can be wrong. Crop prompts use only the image and short same-page heading context. Layout-preserving native PDF text is retained alongside HI_RES extraction; when a single table crop has corresponding extracted labels in the native PDF text, its generated description stays inspectable but is excluded from retrieval to avoid replacing readable rows with invented ones. Answer context has a conservative byte budget within the local model window. No creator-supplied Agent Skill is claimed for this video.
+The PDF workflow follows the [MIT-licensed source](https://github.com/NarimanN2/ollama-playground/tree/bb2ae8d1d3665d725afd5db5df1823203002c15c/multi-modal-rag) at revision `bb2ae8d1d3665d725afd5db5df1823203002c15c`. Reviewed Python implements the workflow; Gemma interprets the source and produces configuration instructions. This is not arbitrary autonomous program synthesis or a creator-supplied Agent Skill.
 
-**Alternative: [HTML presentations](https://www.youtube.com/watch?v=372Iksaz8b0)** by Zara Zhang. It uses pinned [frontend-slides](https://github.com/zarazhangrui/frontend-slides) reference material at `9906a34d640d2111f724544cbc50f7f130569ae1`. Gemma creates three actual cover previews, automatically selects a checked recommendation, builds five slides, tests and repairs them, and preserves inline editing and separate edited-copy export. This is a bounded creation path, not every feature of the source skill.
+The presentation uses recorded [frontend-slides](https://github.com/zarazhangrui/frontend-slides) reference material; the frontend alternative uses the video's linked [frontend-design reference](https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md). Both videos demonstrate Claude. SkillWalk uses local Gemma, so appearance, quality and reliability may differ. Functional checks do not prove visual equivalence.
 
-**Alternative: [Frontend design](https://www.youtube.com/watch?v=DVlHZufvP10)** by AI Coding Daily. It reads the actual video evidence and the creator-linked pinned [frontend-design reference](https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md). The run creates an initial homepage, applies the reference, tests real desktop/mobile behavior and repairs failures. This is an HTML/CSS adaptation, with no Laravel/PHP backend, plugin installation or deployment.
+### Document adaptations and limits
 
-Both alternatives were demonstrated with Claude. SkillWalk uses local Gemma; appearance, quality and reliability may differ. Functional tests do not establish equivalence to the creator's design. Host typography and previous artifact adaptations remain distinct from the tutorial's original design.
+- The video uses Gemma 3 27B; this version uses Gemma 3 4B. EmbeddingGemma replaces llama3.2 because the tested llama3.2 service did not support embeddings.
+- The creator's sample PDF was unavailable. The supplied population worksheet is labelled synthetic and is not current research.
+- The full HI_RES image/table workflow remains. Layout-preserving native PDF text is added, alongside local embeddings, 1000-character chunks with 200 overlap, and retrieval of up to eight chunks.
+- Image descriptions can invent labels or values. A table description stays inspectable but is excluded from answers when a single detected table's labels match native text. This heuristic does not prove complete cell coverage.
+- Retrieved passages fit a bounded context window. Relevant evidence can still be missed; compare answers with the PDF.
 
-You can paste another YouTube link to check availability. Unreviewed videos can be previewed but cannot execute yet. “Not reviewed” does not mean impossible, and a model disclaimer does not establish support for arbitrary tutorials.
+The checked runtime is local Linux/Docker. Running the downloaded Python app independently on native Windows or macOS has not been verified.
 
-## What is live
+## What you are watching
 
-The viewer distinguishes file work, actual isolated Chromium capture and the delivered result. There is no simulated typing, YouTube clicking or screenshot playback presented as live activity. Model responses and operation details are optional.
+The viewer distinguishes file/model work, live isolated Chromium capture and the delivered interactive result. It does not present screenshot playback or simulated typing as live execution. Model output and operation details are optional.
 
-The document app runs on a separate loopback origin. Its source/configuration manifest and downloadable archive are checked before reopening. The default Streamlit deployment toolbar is disabled. The original HTML adapters retain opaque sandboxed previews and hash-gated downloads. Edited slide copies are explicitly not re-tested.
+The completed PDF app runs on a separate local origin. Its recorded checked answers are labelled separately from new questions. You may upload a non-sensitive PDF under 10 MB; this does not replace the original checked archive or verification snapshots.
 
-## Isolation and local data
+## Local data and isolation
 
-The main server binds only to 127.0.0.1 and validates Host, Origin and a per-server request token. Only one job can run, including cleanup and persistence. This is a local tool, not an authenticated public service.
+The host binds to `127.0.0.1:4179`; the document app is relayed at `127.0.0.1:4180`. Host, Origin and request-token checks protect local APIs. Only one job runs at a time. This is a local prototype, not an authenticated public service.
 
-The document processing container is nonroot, read-only and attached only to an internal Docker network. It receives narrowly mounted app, run-data and bridge folders. A restricted filesystem broker forwards only permitted model operations to fixed local Ollama endpoints. A separate fixed-target relay publishes the app only on 127.0.0.1:4180; it does not provide general network access to the processing container. Neither the Docker socket nor unrelated user folders are mounted. A read-only host heartbeat bounds both owned containers; they exit after the host disappears rather than leaving an unusable runtime behind. Checked report/extraction snapshots are outside writable app mounts, so later uploads do not alter the original verification record.
+Document processing uses a nonroot, read-only container on an internal network. A restricted broker forwards approved operations to fixed local Ollama endpoints. Unrelated host folders and the Docker socket are not mounted. A host lease stops owned containers after the host disappears. Browser checks retain Chromium sandboxing, a pinned default-deny seccomp profile and bounded resources.
 
-HTML browser checks retain network isolation, Chromium sandboxing, the version-matched default-deny seccomp profile and bounded resources. Document checks also use sandboxed Chromium. File parsing, source instructions and model output do not authorize unrestricted host commands.
+Runs, user PDFs, source downloads, model logs and verification evidence remain in ignored `.artifacts/`. Uploaded content can persist there after use. Do not share that directory or use sensitive PDFs unintentionally. Model inference stays local; YouTube and initial downloads still use the internet.
 
-Runs, media, source caches, extraction results and reports stay in ignored `.artifacts/`. User PDFs and model-derived descriptions can remain in their run folder; do not use sensitive documents unless you intend to keep that local record. No automatic remote upload or telemetry is enabled. The embedded YouTube player and initial public source/model/package downloads need internet access.
+Downloads are gated on checked hashes. Changed files cannot silently replace a verified result. Repairs are limited to two document-instruction attempts, four deck/website attempts and two cover attempts; runtime failures stop explicitly.
 
-Repairs are bounded: two document instruction repairs, four full-deck/website repairs and two cover repairs. Dependency or runtime failures stop explicitly rather than consuming unrelated prompt repairs. Interrupted jobs are not silently resumed after a server restart; completed results and failed/stopped states can be restored.
+## Verification
 
-## Verify
+Fast tests require Node.js and installed dependencies, without model calls:
 
 ```powershell
 npm test
-node src/document-flow-check.mjs
-node src/style-ui-check.mjs
-node src/reconnect-ui-check.mjs
 ```
 
-The document flow check uses the actual tutorial, real local models and a real isolated browser. It tests table/chart extraction, source evidence, a chart-value answer, a cross-source comparison, insufficient-evidence behavior and narrow layout. It also detects invented dates and rejects answers that mention a chart value while denying the requested population answer. A separate real-browser upload test covered a two-page native-text/table and raster-diagram PDF: prose, table, image, cross-page and unsupported questions. This is tested coverage, not a guarantee for every PDF. Native-label matching does not prove every cell in a mixed native/raster table was extracted; check the source and treat image descriptions as estimates. Results are tied to report, extraction and configuration hashes.
+After document setup, the full check uses the actual video, local models and isolated browser. Run it when another job is not active:
 
-The reconnect UI check covers reload during prior-run cleanup, review arriving before the Analyze reply, and preserved source edits. These browser harnesses use the installed Microsoft Edge on the verified Windows host; they do not call a model.
+```powershell
+node src/document-flow-check.mjs
+```
 
-The style UI check uses controlled generation/verification fixtures to test automatic progression, hidden/off-screen/disconnected viewers and reload. It is not a new AI-quality benchmark. Previously generated artifacts and proof evidence remain local.
+Additional controlled UI checks use installed Microsoft Edge and do not call a model:
 
-The CLI presentation commands `npm run proof`, `npm run verify` and `npm run repair` remain available. `npm run acquire -- <YouTube URL>` caches a reviewed video's evidence. Runtime model changes, general tutorial automation, publishing and deployment are outside this implementation.
+```powershell
+node src/reconnect-ui-check.mjs
+node src/style-ui-check.mjs
+```
+
+The style harness requires an existing presentation run with three generated cover previews in `.artifacts/experiments/`. Complete that tutorial first on a fresh checkout. It verifies automatic progression and optional practice, not new model quality. The reconnect harness covers cleanup/reload, delayed analysis replies and preserved source edits.
+
+Local verification includes 81 Node tests, four Python heartbeat tests, eight strict real-model document/browser checks, and six answers from a separately uploaded synthetic PDF containing prose, a table and an image. The second PDF covered cross-page evidence and honest unknowns. It is bounded test coverage, not a guarantee for every PDF. Fresh browser/local-vision rechecks also passed on previously generated presentation and homepage outputs; those were not new generations.
+
+## License and credits
+
+SkillWalk's original code is [MIT licensed](LICENSE). The document adaptation retains its [upstream MIT notice](document/SOURCE-LICENSE.txt). Bundled fonts retain the SIL Open Font License notices beside them in `web/assets/`.
+
+Tutorial videos, downloaded reference materials, models and dependencies retain their own terms. The project's MIT license does not relicense them. Downloaded materials and private planning/review documents are not included in the repository.
