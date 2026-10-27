@@ -25,13 +25,13 @@ def read_image(file):
         return image.convert('RGB')
 
 
-def ocr_pass(image):
+def ocr_pass(image, modes=(6, 11)):
     # Two segmentation modes must agree; disagreement is not repaired using output text.
     enlarged = image.resize((image.width * 3, image.height * 3))
     data = io.BytesIO()
     enlarged.save(data, format='PNG')
     observations = []
-    for mode in (6, 11):
+    for mode in modes:
         run = subprocess.run(['tesseract', 'stdin', 'stdout', '--psm', str(mode), 'tsv'],
                              input=data.getvalue(), capture_output=True, timeout=25, check=True)
         rows = list(csv.DictReader(io.StringIO(run.stdout.decode('utf-8')), delimiter='\t'))
@@ -43,6 +43,53 @@ def ocr_pass(image):
                 all(o['minimumConfidence'] >= LIMITS['ocrConfidence'] for o in observations))
     return {'status': 'passed' if readable else 'unverified', 'observations': observations,
             'text': observations[0]['text'] if readable else None}
+
+
+def region_ocr(image):
+    """Source-only text proposals; diagnostic evidence, never an acceptance override."""
+    gray = np.asarray(image.convert('L'))
+    ink = (gray < 180).astype('uint8') * 255
+    horizontal = cv2.morphologyEx(ink, cv2.MORPH_OPEN, np.ones((1, 40), np.uint8))
+    vertical = cv2.morphologyEx(ink, cv2.MORPH_OPEN, np.ones((25, 1), np.uint8))
+    lines = cv2.dilate(cv2.bitwise_or(horizontal, vertical), np.ones((3, 3), np.uint8))
+    text = cv2.subtract(ink, lines)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(text, connectivity=8)
+    components = [tuple(int(v) for v in row[:4]) for row in stats[1:] if row[4] >= 2]
+    if not components or len(components) > 400:
+        return {'status': 'unverified', 'regions': [], 'reason': 'No bounded text component inventory'}
+    # Group overlapping baselines; retain disconnected signs and dots instead of dropping them.
+    groups = []
+    for x, y, w, h in sorted(components, key=lambda r: (r[1], r[0])):
+        hits = [g for g in groups if y <= g[3]+2 and y+h >= g[1]-2]
+        if hits:
+            group = hits[0]
+            group[:] = [min(group[0], x), min(group[1], y), max(group[2], x+w), max(group[3], y+h)]
+        else:
+            groups.append([x, y, x+w, y+h])
+    boxes = []
+    for left, top, right, bottom in sorted(groups, key=lambda g: (g[1], g[0])):
+        # Split large horizontal gaps, independently of expected labels or browser DOM.
+        spans = sorted((x, x+w) for x, y, w, h in components if top <= y < bottom)
+        start, end = spans[0]
+        for x, edge in spans[1:]:
+            if x-end > max(8, (bottom-top)*1.5):
+                boxes.append([start, top, end, bottom]);start = x
+            end = max(end, edge)
+        boxes.append([start, top, end, bottom])
+    if len(boxes) > 12:
+        return {'status': 'unverified', 'regions': [], 'reason': 'Text region budget exceeded', 'proposedCount': len(boxes)}
+    regions = []
+    for left, top, right, bottom in boxes:
+        crop = image.crop((max(0,left-2), max(0,top-2), min(image.width,right+2), min(image.height,bottom+2)))
+        padded = Image.new('RGB', (crop.width+20, crop.height+20), 'white')
+        padded.paste(crop, (10,10))
+        reading = ocr_pass(padded, (6,7))
+        regions.append({'bounds': [left,top,right,bottom], **reading})
+    readable = bool(regions) and all(r['status']=='passed' for r in regions)
+    return {'status': 'passed' if readable else 'unverified', 'regions': regions,
+            'text': clean(' '.join(r['text'] for r in regions)) if readable else None,
+            'scope': 'detected-text-regions-only',
+            'reason': 'Region detection may omit marks; diagnostics cannot override full content or coverage checks'}
 
 
 def ocr(image):
