@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {LocalRun} from './ui-runner.mjs';
 import {acquireTutorial} from './acquire.mjs';
-import {readJSON, sha256} from './util.mjs';
+import {json, readJSON, sha256} from './util.mjs';
 import {deliverCheckedResult} from './result-delivery.mjs';
 
 export class GenericRun extends LocalRun {
@@ -23,6 +23,7 @@ export class GenericRun extends LocalRun {
     this.plan = await readJSON(path.join(this.dir, 'output/plan.json'));
     const demo = await readJSON(path.join(this.dir, 'output/demo-brief.json'));
     this.demoBrief = demo.brief;
+    await json(path.join(this.dir, 'brief.json'), demo.brief);
     this.demoSource = demo.provenance;
     this.throwIfStopping();
     this.state('review', 'Review the source-derived task before running.');
