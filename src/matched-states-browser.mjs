@@ -1,5 +1,6 @@
 import {createRequire} from 'node:module';
-const {PNG}=createRequire(import.meta.url)('./node_modules/playwright-core/lib/utilsBundle.js');
+import {estimateRecordingScale,preservesVisibleSemantics} from './recording-scale.mjs';
+const {PNG,jpegjs}=createRequire(import.meta.url)('./node_modules/playwright-core/lib/utilsBundle.js');
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import {createHash} from 'node:crypto';
@@ -18,7 +19,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const origin='http://127.0.0.1:'+server.address().port;
 let browser;
 async function capture(state,kind,probe=false){
- const context=await browser.newContext({viewport:state.viewport,deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:'reduce'});
+ const context=await browser.newContext({viewport:state.viewport,deviceScaleFactor:state.captureScale||1,serviceWorkers:'block',reducedMotion:'reduce'});
  const problems=[];
  try{
   await context.route('**/*',r=>r.request().url()===origin+'/'+kind?r.continue():(problems.push('External request'),r.abort()));
@@ -44,7 +45,7 @@ async function capture(state,kind,probe=false){
    if(elements.length>256)throw Error('Page exceeds bounded comparison');
    return elements.map(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return {tag:e.tagName,id:e.id,text:e.innerText,value:e.value??null,checked:e.checked??null,box:[r.x,r.y,r.width,r.height].map(n=>Math.round(n*100)/100),style:Object.fromEntries(['color','background-color','font-family','font-size','font-weight','line-height','text-align','border-top-width','border-top-style','border-top-color','padding-top','padding-left','margin-top','display'].map(p=>[p,s.getPropertyValue(p)]))};});
   });
-  const screenshot=state.id+'-'+kind+'.png';
+  const screenshot=state.id+'-'+kind+(state.captureScale?'-scaled':'')+'.png';
   const bytes=await page.screenshot({path:'/output/'+screenshot,animations:'disabled',caret:'hide'});
   if(problems.length)throw Error(problems.join('; '));
   return {snapshot,screenshot,screenshotHash:hash(bytes)};
@@ -72,6 +73,20 @@ try{
    if(!found){result.failure='Reference state unresolved: '+initial.message;continue;}
    result.proposedActions=state.actions;result.actions=found;resolved={...state,actions:found};
    try{result.source=await capture(resolved,'source');}catch(e){result.failure='Discovered source state was not reproducible: '+e.message;continue;}
+  }
+  if(plan.sourceVideoId){
+   const crop=await fs.readFile('/input/source-crop-'+state.id+'.jpg');
+   if(hash(crop)!==state.cropHash)throw Error('Crop changed inside replay');
+   const hypothesis=estimateRecordingScale(PNG.sync.read(await fs.readFile('/output/'+result.source.screenshot)),jpegjs.decode(crop));
+   result.recordingScale=hypothesis;
+   if(hypothesis.applied){
+    result.nativeSource=result.source;
+    const nativeSnapshot=result.source.snapshot;
+    resolved={...resolved,viewport:{width:Math.floor(state.viewport.width/hypothesis.scale),height:Math.floor(state.viewport.height/hypothesis.scale)},captureScale:hypothesis.scale};
+    result.captureViewport=resolved.viewport;result.captureScale=hypothesis.scale;
+    try{result.source=await capture(resolved,'source');}catch(e){result.failure='Scaled source capture failed: '+e.message;continue;}
+    if(!preservesVisibleSemantics(nativeSnapshot,result.source.snapshot)){result.failure='Recording-scale hypothesis changes visible source content or styles; source viewport is unresolved';continue;}
+   }
   }
   try{result.output=await capture(resolved,'output');}catch(e){result.failure='Output state failed: '+e.message;continue;}
   result.domMatches=JSON.stringify(result.source.snapshot)===JSON.stringify(result.output.snapshot);

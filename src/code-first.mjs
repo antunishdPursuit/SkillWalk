@@ -27,5 +27,5 @@ export function validateReplayState(state,selectors){
 export function resolvedReplayEvidence(state,result){
  if(result?.passed!==true||result.id!==state.id||JSON.stringify(result.viewport)!==JSON.stringify(state.viewport))throw Error('Resolved replay does not match the approved reference');
  validateReplayState({...state,actions:result.actions},state.observations.map(o=>o.selector));
- return {viewport:result.viewport,actions:result.actions,proposedActions:state.actions};
+ return {viewport:result.viewport,captureViewport:result.captureViewport||result.viewport,captureScale:result.captureScale||1,recordingScale:result.recordingScale||null,actions:result.actions,proposedActions:state.actions};
 }
