@@ -2,7 +2,9 @@
 
 Watch a YouTube tutorial become a working local result. SkillWalk reads a tutorial's captions and sampled frames, prepares a plan with local Gemma, then runs supported workflows, browser checks and bounded repairs.
 
-**Approve once, then watch.** The main tutorial builds a PDF question-answering app. Two alternatives create an HTML presentation or a homepage. There is no paid model API, account requirement or deployment.
+**Approve once, then watch.** The three featured examples and pasted URLs use the same source analysis, capability selection and verification pipeline. The catalog supplies examples, not execution rules keyed to video IDs. There is no paid model API, account requirement or automatic deployment.
+
+SkillWalk uses local Gemma models to follow tutorials. Results depend on the tutorial’s tools, available materials, and your computer. Tutorials using compatible local tools may work more reliably. Tutorials demonstrating other models or services may require adaptations that change the result. SkillWalk will check compatibility before starting.
 
 ## Requirements
 
@@ -42,7 +44,7 @@ Setup builds `skillwalk-document:local` and prepares the version-matched, hash-v
 
 ## Use SkillWalk
 
-1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Unfamiliar videos enter experimental source analysis for self-contained offline HTML tasks; compatibility is decided after analysis.
+1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Every video enters the shared source analysis; compatibility is decided from required capabilities after analysis.
 2. Watch the source analysis, then review the plan, supplied sample and model differences. No writing or content upload is required for the demonstration.
 3. The execution overview has a disclosed ten-second approval countdown with **Pause** and **Start now**. Leaving, hiding or reloading this view pauses approval.
 4. After approval, execution continues without another required click, including if the viewer disconnects. Follow the actual browser activity, checks and repairs.
@@ -50,23 +52,27 @@ Setup builds `skillwalk-document:local` and prepares the version-matched, hash-v
 
 **Stop** prevents subsequent steps after the current operation finishes safely, including delivery after a final check. A request after completion returns an explicit already-finished response. Failed or interrupted runs are labelled; they do not become verified results.
 
-The presentation workflow has a seven-second optional direction window. Doing nothing selects its checked recommendation on the server. Inline slide edits produce a separate copy that has **not** been re-tested.
+Historical presentation runs retain their optional direction window and saved outputs. New runs use the shared source contract. Inline edits produce a separate copy that has **not** been re-tested.
 
-## Experimental unfamiliar tutorials
+## Shared source pipeline
 
-The generic path attempts source-derived HTML/CSS/JavaScript artifacts that work offline in a sandboxed browser. It uses local Gemma to assess cited requirements, interpret sampled frames, create a plan and generate a standalone file. It explicitly rejects requirements it assesses as unavailable, such as a backend, external service, credentials or external assets. The model can miss or misunderstand requirements; review the plan and compare the result with the source. Frame descriptions are model interpretations, not transcripts.
+Every URL uses captions, nine uniformly sampled frames, offline OCR and local vision. Public GitHub or CodePen source linked by the creator can supplement that evidence; inaccessible links are recorded, not bypassed. GitHub material is pinned and hashed. Downloaded source is untrusted data and is never executed on the host.
 
-Media acquisition accepts durations from 20 seconds to one hour, filters individual downloads at 128 MiB, monitors media files against a 256 MiB limit at 100 ms intervals, and rejects oversized cached or final media. The monitored limit can overshoot between checks. English captions are required. Four sampled frames may miss important details, including a final result. Browser checks cover cited visible text or button interactions and console messages, runtime errors, network attempts and horizontal overflow; these do not prove complete source fidelity. Tests with synthetic fixtures are not real-model or unfamiliar-tutorial evidence. This experimental path does not establish support for all compatible tutorials or meet the broader original outcome on its own.
+Local Gemma extracts source-cited requirements, operations, literal content, CSS assertions and interactions. A finite capability check selects standalone offline HTML/CSS/JavaScript or the full isolated multimodal document adapter. Unknown services, credentials and unsupported operations remain explicit compatibility failures. Document configuration comes from the source; its Python implementation is the audited reusable adapter.
 
-## Reviewed tutorials
+HTML checks exercise actual interactions, visible content, semantic structure, computed styles, runtime errors, network attempts and overflow. A separate local vision comparison checks actual source and rendered output. Document runs check extraction, retrieval and answers before comparing source requirements and operations. Model interpretation can still be wrong; a model's pass is not independent proof of complete visual equivalence. The real unfamiliar-tutorial acceptance work is ongoing; fixture tests and historical featured outputs do not establish it.
 
-| Tutorial | Result | Scope |
+Media acquisition accepts durations from 20 seconds to one hour, filters individual downloads at 128 MiB, monitors media files against a 256 MiB limit at 100 ms intervals, and rejects oversized cached or final media. The monitored limit can overshoot between checks. English captions are required. Sampled frames can miss important details; unreadable source references cannot establish fidelity. Failed runs remain incomplete and have no verified final download.
+
+## Featured examples and preserved baselines
+
+| Tutorial | Earlier checked baseline | Demonstrated scope |
 | --- | --- | --- |
 | [Multimodal PDF questions - Nariman Codes](https://youtu.be/hBDNv47KCKo) | Local Streamlit app | Main workflow: PDF extraction, Gemma image/table descriptions, embeddings, retrieval and answers |
 | [HTML presentations - Zara Zhang](https://youtu.be/372Iksaz8b0) | Five-slide HTML deck | Three cover previews, automatic selection, generation, browser tests, repairs and editing |
 | [Frontend design - AI Coding Daily](https://youtu.be/DVlHZufvP10) | Local HTML/CSS homepage | Initial page, reference-guided revision, desktop/mobile checks and repairs; no Laravel/PHP backend |
 
-The PDF workflow follows the [MIT-licensed source](https://github.com/NarimanN2/ollama-playground/tree/bb2ae8d1d3665d725afd5db5df1823203002c15c/multi-modal-rag) at revision `bb2ae8d1d3665d725afd5db5df1823203002c15c`. Reviewed Python implements the workflow; Gemma interprets the source and produces configuration instructions. This is not arbitrary autonomous program synthesis or a creator-supplied Agent Skill.
+The reusable PDF adapter follows the [MIT-licensed source](https://github.com/NarimanN2/ollama-playground/tree/bb2ae8d1d3665d725afd5db5df1823203002c15c/multi-modal-rag) at revision `bb2ae8d1d3665d725afd5db5df1823203002c15c`. Reviewed Python implements the workflow; Gemma interprets the source and produces configuration instructions. This is not arbitrary autonomous program synthesis or a creator-supplied Agent Skill.
 
 The presentation uses recorded [frontend-slides](https://github.com/zarazhangrui/frontend-slides) reference material; the frontend alternative uses the video's linked [frontend-design reference](https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md). Both videos demonstrate Claude. SkillWalk uses local Gemma, so appearance, quality and reliability may differ. Functional checks do not prove visual equivalence.
 
@@ -94,7 +100,7 @@ Document processing uses a nonroot, read-only container on an internal network. 
 
 Runs, user PDFs, source downloads, model logs and verification evidence remain in ignored `.artifacts/`. Uploaded content can persist there after use. Do not share that directory or use sensitive PDFs unintentionally. Model inference stays local; YouTube and initial downloads still use the internet.
 
-Downloads are gated on checked hashes. Changed files cannot silently replace a verified result. Repairs are limited to two document-instruction attempts, four deck/website attempts and two cover attempts; runtime failures stop explicitly.
+Downloads are gated on checked hashes. Changed files cannot silently replace a verified result. New HTML runs allow three generation/check attempts. Document instruction repair allows two retries. Historical deck/website and cover runs retain their previous bounds. Runtime failures stop explicitly.
 
 ## Verification
 
@@ -119,7 +125,7 @@ node src/style-ui-check.mjs
 
 The style harness requires an existing presentation run with three generated cover previews in `.artifacts/experiments/`. Complete that tutorial first on a fresh checkout. It verifies automatic progression and optional practice, not new model quality. The reconnect harness covers cleanup/reload, delayed analysis replies and preserved source edits.
 
-Local verification includes 81 Node tests, four Python heartbeat tests, eight strict real-model document/browser checks, and six answers from a separately uploaded synthetic PDF containing prose, a table and an image. The second PDF covered cross-page evidence and honest unknowns. It is bounded test coverage, not a guarantee for every PDF. Fresh browser/local-vision rechecks also passed on previously generated presentation and homepage outputs; those were not new generations.
+Historical verification included four Python heartbeat tests, eight strict real-model document/browser checks, and six answers from a separately uploaded synthetic PDF containing prose, a table and an image. The second PDF covered cross-page evidence and honest unknowns. It is bounded test coverage, not a guarantee for every PDF. Fresh browser/local-vision rechecks also passed on previously generated presentation and homepage outputs; those were not new generations.
 
 ## License and credits
 

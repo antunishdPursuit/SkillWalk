@@ -40,6 +40,11 @@ test('loopback API admits unknown tutorials for analysis and blocks foreign orig
   assert.equal((await unknown.json()).compatibility.available,true);
   const rejected=await fetch(origin+'/api/analyze',{method:'POST',headers,body:JSON.stringify({url:'https://youtu.be/abcdefghijk'})});
   assert.equal(rejected.status,202);assert.deepEqual(dispatched,{kind:'generic',tutorial:'abcdefghijk'});
+  for (const tutorial of ['372Iksaz8b0', 'DVlHZufvP10', 'hBDNv47KCKo']) {
+    await new Promise(resolve => setImmediate(resolve));
+    const response = await fetch(origin+'/api/analyze', {method:'POST', headers, body:JSON.stringify({url:'https://youtu.be/'+tutorial})});
+    assert.equal(response.status,202); assert.deepEqual(dispatched,{kind:'generic',tutorial});
+  }
   const valid=await fetch(origin+'/api/preview',{method:'POST',headers,body:JSON.stringify({url:'https://youtu.be/372Iksaz8b0'})});
   assert.equal((await valid.json()).creator,'Controlled creator');
   assert.equal((await fetch(origin+'/api/result?id=missing')).status,409);

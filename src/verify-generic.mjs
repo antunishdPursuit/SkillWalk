@@ -17,6 +17,7 @@ const args = [
   '--tmpfs', '/tmp:rw,nosuid,nodev,size=536870912',
   '--mount', `type=bind,source=${path.join(root, 'node_modules')},target=/app/node_modules,readonly`,
   '--mount', `type=bind,source=${path.join(root, 'src', 'verify-generic-browser.mjs')},target=/app/browser.mjs,readonly`,
+  '--mount', `type=bind,source=${path.join(root, 'src', 'contract-browser-checks.mjs')},target=/app/contract-browser-checks.mjs,readonly`,
   '--mount', `type=bind,source=${outputDir},target=/input,readonly`,
   '--mount', `type=bind,source=${verificationDir},target=/output`,
   '-e', 'SKILLWALK_LIVE=1', '-w', '/app', image, 'node', 'browser.mjs'

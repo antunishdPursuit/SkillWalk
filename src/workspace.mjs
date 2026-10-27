@@ -29,6 +29,7 @@ const practiceSteps={
  ]
 };
 export function practiceFor(run){
+ if(run?.status==='complete'&&run.pipeline==='shared-v1')return {key:'shared:'+run.id,sourceURL:'https://www.youtube.com/watch?v='+run.tutorialId,steps:['Keep the original checked download as a baseline.','Compare the cited tutorial operations and visible source requirements with the completed result.','Make changes in a separate copy and rerun relevant checks; edited copies are not verified automatically.'],downloadURL:'/api/result?id='+encodeURIComponent(run.id)+'&download=1',downloadLabel:run.kind==='document'?'Download checked app source':'Download checked HTML'};
  if(run?.status!=='complete'||typeof run.id!=='string'||!run.id||!Object.hasOwn(practiceSteps,run.kind))return null;
  const source=catalogEntry(run.kind);
  if(run.tutorialId&&run.tutorialId!==source.id)return null;

@@ -13,7 +13,7 @@ import {LocalRun} from '../src/ui-runner.mjs';
 test('document is featured without retiring existing tutorials; custom URLs are honestly unreviewed',()=>{
  assert.equal(tutorials[0].id,documentId);assert.equal(tutorials.length,3);
  assert.equal(reviewedTutorial('372Iksaz8b0').kind,'presentation');assert.equal(reviewedTutorial('DVlHZufvP10').kind,'website');
- assert.equal(compatibilityFor('abcdefghijk').available,false);assert.match(compatibilityFor('abcdefghijk').message,/not a claim that it is impossible/);
+ assert.equal(compatibilityFor('abcdefghijk').available,true);assert.match(compatibilityFor('abcdefghijk').message,/actual source requirements/);
  assert.match(compatibilityFor('372Iksaz8b0').message,/Claude/);assert.match(compatibilityFor(documentId).message,/27B/);
 });
 test('document execution metadata never becomes a slide workflow or cover-repair stage',()=>{

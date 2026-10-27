@@ -1,3 +1,4 @@
+import {checkSourceContract} from './contract-browser-checks.mjs';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import assert from 'node:assert/strict';
@@ -34,7 +35,8 @@ try {
   });
   event('browser-start', {capture: 'Isolated Chromium'});
   await page.goto(origin + '/');
-  for (const check of plan.checks) {
+  if (plan.content) await checkSourceContract(page, plan, label => { report.checks.push(label); event('check', {check: label}); });
+  for (const check of plan.checks || []) {
     if (check.type === 'click_console') {
       const escaped = RegExp.escape(check.target);
       const target = page.getByRole('button', {name: new RegExp('^' + escaped + '$', 'i')});
@@ -58,6 +60,7 @@ try {
     report.checks.push(label);
     event('check', {check: label});
   }
+  await page.screenshot({path: '/output/generic-desktop.png', fullPage: true});
   for (const width of [1280, 390]) {
     await page.setViewportSize({width, height: 800});
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
