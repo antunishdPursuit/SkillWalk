@@ -71,23 +71,46 @@ def mark_inventory(image):
         if rectangle:
             border_mask[labels == index] = 255
         entries.append({'id':index,'bounds':[x,y,x+w,y+h],'pixels':area,
+                        'pixelHash':hashlib.sha256(pixels[labels == index].tobytes()).hexdigest(),
+                        'componentMaskHash':hashlib.sha256(component.tobytes()).hexdigest(),
                         'kind':'outline-candidate' if rectangle else 'unresolved',
                         'classificationStatus':'unverified',
                         'reason':'Geometric outline only; may be a meaningful icon or glyph; retained in raw appearance checks' if rectangle else 'No independent non-text classification'})
     return border_mask, labels, entries, marks
 
 
-def region_ocr(image):
+def outline_temporal_support(center, before, after):
+    def signature(entries):
+        return {(tuple(item['bounds']),item['pixels'],item['pixelHash'],item['componentMaskHash']) for item in entries
+                if item.get('kind')=='outline-candidate'}
+    expected=signature(center)
+    supported=bool(expected) and signature(before)==expected==signature(after)
+    return {'status':'supported' if supported else 'unverified',
+            'candidateCount':len(expected),'classificationStatus':'unverified',
+            'reason':'Exact outline geometry and colors at three samples; static icons can satisfy this too'}
+
+
+def region_ocr(image, proposal_mode='outline-candidates'):
     """Source-only text proposals; diagnostic evidence, never an acceptance override."""
     gray = np.asarray(image.convert('L'))
     ink = (gray < 180).astype('uint8') * 255
     borders, mark_labels, ledger, marks = mark_inventory(image)
-    text = cv2.subtract(ink, borders)
+    proposal_mask = borders
+    if proposal_mode == 'line-proposal':
+        horizontal = cv2.morphologyEx(ink, cv2.MORPH_OPEN, np.ones((1,40),np.uint8))
+        vertical = cv2.morphologyEx(ink, cv2.MORPH_OPEN, np.ones((25,1),np.uint8))
+        proposal_mask = cv2.dilate(cv2.bitwise_or(horizontal,vertical),np.ones((3,3),np.uint8))
+    elif proposal_mode != 'outline-candidates':
+        raise ValueError('Unknown diagnostic proposal mode')
+    text = cv2.subtract(ink, proposal_mask)
     accounting = {'sourcePixelHash':hashlib.sha256(np.asarray(image).tobytes()).hexdigest(),
                   'markedPixels':int(marks.sum()),'entries':ledger,
                   'outlineCandidatePixels':int(np.count_nonzero(borders)),
                   'semanticallyUnresolvedPixels':int(marks.sum()),
                   'outlineMaskHash':hashlib.sha256(borders.tobytes()).hexdigest(),
+                  'proposalMode':proposal_mode,
+                  'proposalMaskHash':hashlib.sha256(proposal_mask.tobytes()).hexdigest(),
+                  'proposalRemovedMarkedPixels':int(np.count_nonzero((proposal_mask>0)&(marks>0))),
                   'appearanceInput':'unchanged-original-image'}
     count, labels, stats, _ = cv2.connectedComponentsWithStats(text, connectivity=8)
     components = [tuple(int(v) for v in row[:4]) for row in stats[1:]]

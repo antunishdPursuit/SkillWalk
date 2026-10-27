@@ -1,6 +1,7 @@
 """Adversarial geometry controls: real marks must never vanish as border cleanup."""
 import importlib.util
 import json
+import io
 import numpy as np
 from PIL import Image, ImageDraw
 spec = importlib.util.spec_from_file_location('checker', '/checker.py')
@@ -42,4 +43,38 @@ for y in range(0,160,4):
     for x in range(0,240,4):draw.point((x,y),fill='black')
 border,labels,ledger,marks=checker.mark_inventory(image)
 assert len(ledger)==1 and ledger[0]['pixels']==int(marks.sum()) and not border.any()
+def outlines(offset=0,color='black'):
+    frame=Image.new('RGB',(240,160),'white')
+    ImageDraw.Draw(frame).rectangle((30+offset,30,180+offset,90),outline=color)
+    return checker.mark_inventory(frame)[2]
+center=outlines()
+assert checker.outline_temporal_support(center,center,center)['status']=='supported'
+assert checker.outline_temporal_support(center,center,center)['classificationStatus']=='unverified'
+for changed in [outlines(1),outlines(color='gray'),[]]:
+    assert checker.outline_temporal_support(center,center,changed)['status']=='unverified'
+# Same bounds, area and colors, but different placement of the extra edge pixels.
+shapes=[]
+for y in [31,89]:
+    frame=Image.new('RGB',(240,160),'white');draw=ImageDraw.Draw(frame)
+    draw.rectangle((30,30,180,90),outline='black')
+    draw.line((31,y,179,y),fill='black')
+    entries=checker.mark_inventory(frame)[2]
+    assert len(entries)==1 and entries[0]['kind']=='outline-candidate'
+    shapes.append(entries)
+assert shapes[0][0]['pixels']==shapes[1][0]['pixels']
+assert shapes[0][0]['pixelHash']==shapes[1][0]['pixelHash']
+assert checker.outline_temporal_support(shapes[0],shapes[0],shapes[1])['status']=='unverified'
+# JPEG noise remains accounted for even when it destroys outline confidence.
+frame=Image.new('RGB',(240,160),'white');ImageDraw.Draw(frame).rectangle((30,30,180,90),outline='black')
+encoded=io.BytesIO();frame.save(encoded,format='JPEG',quality=75)
+frame=Image.open(io.BytesIO(encoded.getvalue())).convert('RGB')
+border,labels,ledger,marks=checker.mark_inventory(frame)
+assert sum(item['pixels'] for item in ledger)==int(marks.sum())
+# Alternative line removal may exclude a real minus from region proposals,
+# but its pixels must remain accounted for and the diagnostic must not pass.
+frame=Image.new('RGB',(240,160),'white');ImageDraw.Draw(frame).line((30,60,100,60),fill='black',width=2)
+alternative=checker.region_ocr(frame,'line-proposal')
+assert alternative['status']=='unverified'
+assert alternative['accounting']['markedPixels']==alternative['accounting']['semanticallyUnresolvedPixels']
+assert alternative['accounting']['proposalRemovedMarkedPixels']>0
 print(json.dumps(results,indent=2))
