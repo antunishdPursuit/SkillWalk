@@ -17,6 +17,7 @@ test('generic plans must cite exact source and provide visible checks', () => {
   assert.deepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], expected: '1'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, steps: [{...plan.steps[0], segment_id: 'missing'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, checks: []}, segments), []);
+  assert.notDeepEqual(validateGenericPlan({...plan, summary: 'Insufficient evidence to determine behavior'}, segments), []);
   assert.deepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], type: 'click_console'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], type: 'visible'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, supported: false}, segments), []);
