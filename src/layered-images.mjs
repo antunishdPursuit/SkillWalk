@@ -13,17 +13,18 @@ export function validLayeredResult(value){
   value.passed===(value.content.status==='passed'&&value.appearance.status==='passed');
 }
 
-export async function compareLayeredImages({reference,creator,candidate,browserText},directory,{execute=exec}={}){
+export async function compareLayeredImages({reference,creator,candidate,browserText,neighbors=[]},directory,{execute=exec}={}){
  if(typeof browserText!=='string'||browserText.length>64000)throw Error('Invalid visible browser text');
+ if(!Array.isArray(neighbors)||![0,2].includes(neighbors.length))throw Error('Expected two temporal references or none');
  await fs.mkdir(directory,{recursive:true});
  const input=await fs.mkdtemp(path.join(directory,'layered-input-'));
  const identities={};
- for(const [name,file] of Object.entries({reference,creator,candidate})){
+ for(const [name,file] of Object.entries({reference,creator,candidate,...Object.fromEntries(neighbors.map((file,i)=>['neighbor'+i,file]))})){
   const bytes=await fs.readFile(file);
   if(bytes.length>16*1024*1024)throw Error('Image exceeds verification byte limit');
   identities[name]=sha256(bytes);await fs.writeFile(path.join(input,name+'.png'),bytes);
  }
- await json(path.join(input,'request.json'),{browserText});
+ await json(path.join(input,'request.json'),{browserText,neighborCount:neighbors.length});
  const name='skillwalk-layered-'+randomUUID();
  const checker=path.join(root,'src/layered-image.py'),checkerHash=sha256(await fs.readFile(checker));
  let result;

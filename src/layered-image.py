@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+import cv2
 import numpy as np
 from PIL import Image
 
@@ -24,7 +25,7 @@ def read_image(file):
         return image.convert('RGB')
 
 
-def ocr(image):
+def ocr_pass(image):
     # Two segmentation modes must agree; disagreement is not repaired using output text.
     enlarged = image.resize((image.width * 3, image.height * 3))
     data = io.BytesIO()
@@ -42,6 +43,22 @@ def ocr(image):
                 all(o['minimumConfidence'] >= LIMITS['ocrConfidence'] for o in observations))
     return {'status': 'passed' if readable else 'unverified', 'observations': observations,
             'text': observations[0]['text'] if readable else None}
+
+
+def ocr(image):
+    raw = ocr_pass(image)
+    gray = np.asarray(image.convert('L'))
+    mask = (gray < 180).astype('uint8') * 255
+    horizontal = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((1, 40), np.uint8))
+    vertical = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((25, 1), np.uint8))
+    lines = cv2.dilate(cv2.bitwise_or(horizontal, vertical), np.ones((3, 3), np.uint8))
+    cleaned = ocr_pass(Image.fromarray(255-cv2.subtract(mask, lines)))
+    usable = [entry for entry in (raw, cleaned) if entry['status'] == 'passed']
+    agreed = bool(usable) and len({entry['text'] for entry in usable}) == 1
+    return {'status': 'passed' if agreed else 'unverified',
+            'text': usable[0]['text'] if agreed else None,
+            'variants': {'raw': raw, 'bordersRemoved': cleaned},
+            'reason': 'Each usable variant requires two-mode agreement; conflicting usable variants remain uncertain'}
 
 
 def background(image):
@@ -84,8 +101,16 @@ def metrics(reference, candidate):
 
 
 def visual(reference, creator, candidate):
-    if reference.size != creator.size or candidate.size != creator.size:
+    if candidate.size != creator.size or any(abs(a-b) > 2 for a, b in zip(reference.size, creator.size)):
         return {'status': 'unverified', 'reason': 'Capture dimensions differ; no output-dependent resizing'}
+    canvas = (max(reference.width, creator.width), max(reference.height, creator.height))
+    original_sizes = {'reference': reference.size, 'creator': creator.size, 'candidate': candidate.size}
+    def pad(image):
+        result = Image.new('RGB', canvas, tuple(int(v) for v in background(image)))
+        result.paste(image, (0, 0))
+        return result
+    # Device scale rounding may differ by <=2 pixels. Pad only; never crop or rescale content.
+    reference, creator, candidate = [pad(image) for image in (reference, creator, candidate)]
     # Choose only a small translation from reference + pinned creator, never candidate.
     best = None
     for dy in range(-LIMITS['alignmentPixels'], LIMITS['alignmentPixels']+1):
@@ -110,7 +135,7 @@ def visual(reference, creator, candidate):
               evidence['foregroundDelta'] <= LIMITS['foregroundDelta'])
     return {'status': 'passed' if passed else 'failed', 'alignment': {'x': dx, 'y': dy},
             'alignmentSource': 'video-and-pinned-creator-only', 'discardedContent': lost,
-            'metrics': evidence, 'limits': LIMITS}
+            'metrics': evidence, 'limits': LIMITS, 'originalSizes': original_sizes, 'paddedCanvas': canvas}
 
 
 def verify(reference, creator, candidate, expected_text):
@@ -118,8 +143,11 @@ def verify(reference, creator, candidate, expected_text):
     readable = source_text['status'] == output_text['status'] == 'passed'
     status = ('passed' if source_text['text'] == output_text['text'] == clean(expected_text)
               else 'failed') if readable else 'unverified'
+    if readable and source_text['text'] == output_text['text'] != clean(expected_text):
+        status = 'unverified'  # Both OCR passes can omit the same small controls.
     content = {'status': status, 'source': source_text, 'output': output_text,
-               'browserText': clean(expected_text)}
+               'browserText': clean(expected_text),
+               'reason': 'Require agreement between independent source OCR, output OCR and browser text'}
     appearance = visual(reference, creator, candidate)
     return {'scope': 'selected-source-crop-only', 'content': content, 'appearance': appearance,
             'passed': status == 'passed' and appearance['status'] == 'passed',
@@ -131,4 +159,13 @@ def verify(reference, creator, candidate, expected_text):
 if __name__ == '__main__':
     request = json.loads(Path('/input/request.json').read_text())
     images = [read_image(Path('/input') / name) for name in ('reference.png', 'creator.png', 'candidate.png')]
-    print(json.dumps(verify(*images, request['browserText'])))
+    report = verify(*images, request['browserText'])
+    count = request.get('neighborCount', 0)
+    if count not in (0, 2):
+        raise ValueError('Invalid temporal reference count')
+    observations = [ocr(read_image(Path('/input') / f'neighbor{i}.png')) for i in range(count)]
+    stable = (count == 2 and report['content']['source']['status'] == 'passed' and
+              all(o['status'] == 'passed' and o['text'] == report['content']['source']['text'] for o in observations))
+    report['temporal'] = {'status': 'passed' if stable else 'unverified', 'observations': observations,
+                          'reason': 'Require readable agreeing source text before, at and after the selected state'}
+    print(json.dumps(report))

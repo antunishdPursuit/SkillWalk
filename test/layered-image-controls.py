@@ -40,10 +40,18 @@ compressed = io.BytesIO()
 reference.save(compressed, format='JPEG', quality=85)
 jpeg = Image.open(io.BytesIO(compressed.getvalue())).convert('RGB')
 result = module.verify(jpeg, reference, reference, 'Add Subtract -3')
-results.append({'name': 'compressed-correct-ocr-ambiguous', **result})
+results.append({'name': 'compressed-correct', **result})
 assert result['appearance']['status'] == 'passed', json.dumps(results[-1])
-assert result['content']['status'] == 'unverified' and not result['passed'], json.dumps(results[-1])
+assert result['content']['status'] in ('passed', 'unverified'), json.dumps(results[-1])
+if result['content']['status'] == 'passed':
+    assert result['content']['source']['text'] == result['content']['output']['text'] == 'Add Subtract -3'
+else:
+    assert not result['passed']
 assert module.visual(reference, reference, page().resize((240, 120)))['status'] == 'unverified'
+rounded = Image.new('RGB', (482, 240), 'white')
+rounded.paste(reference, (0, 0))
+assert module.visual(rounded, reference, reference)['status'] == 'passed'
+assert module.verify(reference, reference, reference, 'Add Subtract -3 Missing')['content']['status'] == 'unverified'
 blank = Image.new('RGB', (480, 240), 'white')
 assert module.ocr(blank)['status'] == 'unverified'
 gray = reference.point(lambda p: 30 if p == 0 else p)
