@@ -36,4 +36,5 @@ if (sha256(await fs.readFile(path.join(outputDir, 'website.html'))) !== hash) {
 }
 await json(path.join(verificationDir, 'generic-report.json'), report);
 if (code) { report.passed = false; report.failure ||= 'Browser exited without completing verification'; await json(path.join(verificationDir, 'generic-report.json'), report); }
+await json(path.join(verificationDir, 'execution-report.json'), report);
 if (code || !report.passed) process.exitCode = 1;

@@ -35,9 +35,4 @@ review.referenceFrames = references.map(f => ({id: f.id, sha256: f.sha256,artifa
 review.artifactHash = report.artifactHash;
 review.passed = sourceFidelityPassed(review);
 await json(path.join(verificationDir, 'source-fidelity.json'), review);
-if (!review.passed) {
-  report.passed = false;
-  report.failure = 'Source fidelity failed: ' + (Array.isArray(review.differences) && review.differences.join('; ') || 'Content/style comparison was uncertain or malformed');
-} else report.checks.push('Local vision compared actual source and generated content and styling');
-await json(path.join(verificationDir, 'generic-report.json'), report);
 if (!review.passed) process.exitCode = 1;

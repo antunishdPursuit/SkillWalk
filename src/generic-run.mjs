@@ -72,10 +72,17 @@ export class GenericRun extends DocumentRun {
       this.throwIfStopping();
       let report = await readJSON(path.join(this.dir, 'verification/generic-report.json'));
       if (result.code === 0 && report.passed) {
+        await json(path.join(this.dir, 'verification/execution-report.json'), report);
         this.state('testing', 'Comparing actual tutorial content and styling with the rendered result');
         result = await this.step('visual-contract-review.mjs');
         this.throwIfStopping();
-        report = await readJSON(path.join(this.dir, 'verification/generic-report.json'));
+        const fidelity = await readJSON(path.join(this.dir, 'verification/source-fidelity.json')).catch(() => null);
+        if (result.code !== 0 || fidelity?.passed !== true || fidelity.artifactHash !== report.artifactHash) {
+          await json(path.join(this.dir, 'verification/verification-report.json'), {passed:false, executionPassed:true, artifactHash:report.artifactHash, fidelity, failure:result.error || 'Source fidelity is unresolved; successful execution was preserved.'});
+          throw Error('Execution passed; source verification failed or is uncertain. Artifact preserved without regeneration.');
+        }
+        await json(path.join(this.dir, 'verification/verification-report.json'), {passed:true, executionPassed:true, artifactHash:report.artifactHash, fidelity});
+        report.checks.push('Separate source-fidelity review passed');
       }
       if (result.code === 0 && report.passed) {
         const hash = sha256(await fs.readFile(path.join(this.dir, 'output/website.html')));
