@@ -7,6 +7,7 @@ import {root, outputDir, verificationDir, sha256, json} from './util.mjs';
 const profile = await ensureSandboxProfile();
 await fs.mkdir(verificationDir, {recursive: true});
 const hash = sha256(await fs.readFile(path.join(outputDir, 'website.html')));
+const contractHash = sha256(await fs.readFile(path.join(outputDir,'plan.json')));
 await json(path.join(verificationDir, 'generic-report.json'), {passed: false, checks: [], failure: 'Browser did not complete verification'});
 const image = 'mcr.microsoft.com/playwright:v1.64.0-noble';
 const args = [
@@ -30,7 +31,8 @@ const code = await new Promise((resolve, reject) => {
 });
 const report = JSON.parse(await fs.readFile(path.join(verificationDir, 'generic-report.json'), 'utf8'));
 report.artifactHash = hash;
-if (sha256(await fs.readFile(path.join(outputDir, 'website.html'))) !== hash) {
+report.contractHash = contractHash;
+if (sha256(await fs.readFile(path.join(outputDir, 'website.html'))) !== hash || sha256(await fs.readFile(path.join(outputDir,'plan.json'))) !== contractHash) {
   report.passed = false;
   report.failure = 'Artifact changed during browser verification';
 }

@@ -1,3 +1,5 @@
+import {pinnedCreatorBundle} from './code-first.mjs';
+import {analyzeReplayStates} from './analyze-states.mjs';
 import {inspectCreatorRender} from './creator-render.mjs';
 import {analyzeSourceContract} from './analyze-source.mjs';
 import {acquireCreatorMaterials, bundleCreatorHTML} from './creator-materials.mjs';
@@ -107,6 +109,15 @@ async function main() {
     const materials = await acquireCreatorMaterials(evidence.metadata, outputDir);
     const inspection = await inspectSource(evidence, outputDir);
     const plan = await analyzeSourceContract(evidence, inspection, materials, {inspectCreator:(entry,files)=>inspectCreatorRender(entry,files,outputDir)});
+    if(plan.artifact==='html' && plan.creatorEntry){
+      const entry=materials.files.find(f=>f.id===plan.creatorEntry);
+      const bundle=pinnedCreatorBundle(entry,materials.files);
+      const reference=await readJSON(path.join(outputDir,'source-reference-facts.json'));
+      if(reference.htmlHash!==bundle.manifest.htmlHash)throw Error('Creator planning reference changed');
+      await json(path.join(outputDir,'code-first.json'),bundle.manifest);
+      plan.replayButtons=[...new Set(reference.buttons)].filter(b=>typeof b==='string'&&b.trim()&&b.length<=120).slice(0,8);
+      plan.replayStates=await analyzeReplayStates(plan,inspection,reference,bundle.html);
+    }
     plan.sourceVideoId = evidence.metadata.id;
     plan.videoHash = evidence.video.sha256;
     await json(path.join(outputDir, 'plan.json'), plan);
@@ -123,7 +134,10 @@ async function main() {
     const entry = materials.files.find(f => f.id === plan.creatorEntry && /\.html?$/i.test(f.name));
     let sourceHTML = '';
     if (entry) {
-      try { const bundled = bundleCreatorHTML(entry, materials.files); if (!artifactIssues(bundled).length) sourceHTML = bundled; } catch {}
+      const bundle=pinnedCreatorBundle(entry,materials.files);
+      const manifest=await readJSON(path.join(outputDir,'code-first.json'));
+      if(bundle.manifest.htmlHash!==manifest.htmlHash)throw Error('Pinned creator implementation changed after approval');
+      sourceHTML=bundle.html;
     }
     if(sourceHTML && feedback)throw Error('Creator implementation disagrees with the approved source checks. Independent source reconciliation is required; checks were not changed.');
     const raw = sourceHTML || await callModel('generic-html', [

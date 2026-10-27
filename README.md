@@ -136,3 +136,8 @@ Historical verification included four Python heartbeat tests, eight strict real-
 SkillWalk's original code is [MIT licensed](LICENSE). The document adaptation retains its [upstream MIT notice](document/SOURCE-LICENSE.txt). Bundled fonts retain the SIL Open Font License notices beside them in `web/assets/`.
 
 Tutorial videos, downloaded reference materials, models and dependencies retain their own terms. The project's MIT license does not relicense them. Downloaded materials and private planning/review documents are not included in the repository.
+
+
+For code-linked experimental tutorials, SkillWalk pins creator source files, measures the page before generation, and analyzes requirements, operations and individual visible states separately. It replays bounded actions on creator and output pages at the same viewport, compares DOM/style/geometry and screenshots, then separately judges video coverage, content and style. Crop dimensions do not establish original recording zoom.
+
+Execution evidence is saved in execution-report.json; source-fidelity evidence and the combined verifier decision remain separate. An uncertain visual judgment does not regenerate an artifact that passed execution checks, and does not enable a verified download. These bounded comparisons do not establish general unfamiliar-tutorial reliability. The three featured examples retain their existing flows.

@@ -77,7 +77,7 @@ export class GenericRun extends DocumentRun {
         result = await this.step('visual-contract-review.mjs');
         this.throwIfStopping();
         const fidelity = await readJSON(path.join(this.dir, 'verification/source-fidelity.json')).catch(() => null);
-        if (result.code !== 0 || fidelity?.passed !== true || fidelity.artifactHash !== report.artifactHash) {
+        if (result.code !== 0 || fidelity?.passed !== true || fidelity.artifactHash !== report.artifactHash || fidelity.contractHash !== report.contractHash) {
           await json(path.join(this.dir, 'verification/verification-report.json'), {passed:false, executionPassed:true, artifactHash:report.artifactHash, fidelity, failure:result.error || 'Source fidelity is unresolved; successful execution was preserved.'});
           throw Error('Execution passed; source verification failed or is uncertain. Artifact preserved without regeneration.');
         }
@@ -87,7 +87,7 @@ export class GenericRun extends DocumentRun {
       if (result.code === 0 && report.passed) {
         const hash = sha256(await fs.readFile(path.join(this.dir, 'output/website.html')));
         const generation = await readJSON(path.join(this.dir, 'output/generic-generation.json'));
-        if (hash !== generation.sha256 || hash !== report.artifactHash || generation.contractHash !== sha256(await fs.readFile(path.join(this.dir, 'output/plan.json')))) {
+        if (hash !== generation.sha256 || hash !== report.artifactHash || report.contractHash !== generation.contractHash || generation.contractHash !== sha256(await fs.readFile(path.join(this.dir, 'output/plan.json')))) {
           throw Error('Artifact changed between generation and checks');
         }
         await deliverCheckedResult(this, {

@@ -8,6 +8,7 @@ test('creator browser measurements ground the initial contract before any genera
   const model=async(name)=>{
     calls.push(name);
     if(name.startsWith('source-requirements'))return JSON.stringify({summary:'Make the source page',requirements:[{description:'HTML authoring',capability:'local-authoring',required:true,segment_id:'s0'}],steps:[{action:'Make the page',required:true,segment_id:'s0'}],creatorEntry:'m0'});
+    if(name.startsWith('source-operations'))return JSON.stringify({steps:[{action:'Make the page',required:true,segment_id:'s0'}]});
     if(name.startsWith('source-creator-entry'))return '{"creatorEntry":"m0"}';
     throw Error('Unexpected guessing of measured source: '+name);
   };
@@ -20,5 +21,5 @@ test('creator browser measurements ground the initial contract before any genera
   assert.equal(plan.content[0].text,'Original source');
   assert.equal(plan.content[0].sourceKind,'creator-material');
   assert.ok(plan.requirements.some(r=>r.capability==='html'&&r.segment_id==='m0'));
-  assert.equal(calls.length,2);
+  assert.deepEqual(calls,['source-requirements-0','source-operations-0','source-creator-entry-0']);
 });

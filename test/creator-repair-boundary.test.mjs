@@ -1,3 +1,4 @@
+import {sha256} from '../src/util.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -14,7 +15,8 @@ test('a wrong selected creator implementation cannot repair away approved source
     const source=path.join(directory,'.artifacts/sources/abcdefghijk');await fs.mkdir(source,{recursive:true});
     const plan=JSON.stringify({creatorEntry:'m0',content:[{text:'Required source result',selector:'p',segment_id:'s0'}]});
     const wrong='<!doctype html><html><head><title>Wrong example</title></head><body><p>Unrelated result</p></body></html>';
-    for(const [name,value] of Object.entries({'plan.json':plan,'source-inspection.json':'{"frames":[]}', 'creator-materials.json':JSON.stringify({files:[{id:'m0',name:'index.html',text:wrong,collection:'controlled'}]})}))await fs.writeFile(path.join(output,name),value);
+    for(const [name,value] of Object.entries({'plan.json':plan,'source-inspection.json':'{"frames":[]}', 'creator-materials.json':JSON.stringify({files:[{id:'m0',name:'index.html',text:wrong,collection:'controlled',revision:'fixed',sha256:sha256(wrong)}]})}))await fs.writeFile(path.join(output,name),value);
+    await fs.writeFile(path.join(output,'code-first.json'),JSON.stringify({htmlHash:sha256(wrong)}));
     await fs.writeFile(path.join(output,'website.html'),wrong);
     await fs.writeFile(path.join(source,'evidence.json'),JSON.stringify({metadata:{id:'abcdefghijk'},segments:[]}));
     await assert.rejects(()=>exec(process.execPath,['src/generic-proof.mjs','generate'],{cwd:directory,windowsHide:true,env:{...process.env,PROOF_RUN:'controlled',TUTORIAL_VIDEO_ID:'abcdefghijk',SKILLWALK_REPAIR_FEEDBACK:'Missing required source result',OLLAMA_BASE:'http://127.0.0.1:9',OLLAMA_TEXT_BASE:'http://127.0.0.1:9'}}),/checks were not changed/);

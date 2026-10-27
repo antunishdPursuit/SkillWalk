@@ -1,3 +1,4 @@
+import {reviewCodeFirst} from './code-first-visual.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {callModel} from './model.mjs';
@@ -10,6 +11,11 @@ const plan = await readJSON(path.join(outputDir, 'plan.json'));
 const inspection = await readJSON(path.join(outputDir, 'source-inspection.json'));
 const report = await readJSON(path.join(verificationDir, 'generic-report.json'));
 if (!report.passed) throw Error('Browser checks must pass before source fidelity review');
+if(plan.replayStates){
+ const review=await reviewCodeFirst(plan,inspection,outputDir,verificationDir);
+ await json(path.join(verificationDir,'source-fidelity.json'),review);
+ if(!review.passed)process.exitCode=1;
+}else{
 const references = inspection.frames.filter(f => plan.referenceFrames.includes(f.id) && f.artifactVerified===true && ['artifact', 'mixed'].includes(f.view)).slice(-2);
 if (!references.length) throw Error('No rendered source reference available for visual verification');
 const images = [];
@@ -33,6 +39,9 @@ const review = JSON.parse(await callModel('vision-source-output-comparison', [
 ], {images, schema, predict: 2200, context: 16384}));
 review.referenceFrames = references.map(f => ({id: f.id, sha256: f.sha256,artifactSha256:f.artifactSha256,artifactReview:f.artifactReview}));
 review.artifactHash = report.artifactHash;
+review.contractHash = sha256(await fs.readFile(path.join(outputDir,'plan.json')));
 review.passed = sourceFidelityPassed(review);
 await json(path.join(verificationDir, 'source-fidelity.json'), review);
 if (!review.passed) process.exitCode = 1;
+
+}
