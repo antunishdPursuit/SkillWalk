@@ -10,7 +10,7 @@ test('countdown pauses without elapsed hidden time and fires once',()=>{let now=
 
 test('only canonical public YouTube URLs are accepted',()=>{assert.equal(tutorialId('https://youtu.be/372Iksaz8b0'),'372Iksaz8b0');for(const u of ['http://127.0.0.1/video','https://youtube.com.evil.test/watch?v=372Iksaz8b0','https://evil@youtube.com/watch?v=372Iksaz8b0'])assert.throws(()=>tutorialId(u));});
 
-test('loopback API admits unknown tutorials for analysis and blocks foreign origins and unverified results',async()=>{
+test('loopback API rejects unsupported release tutorials and blocks foreign origins and unverified results',async()=>{
  const root=path.resolve(import.meta.dirname,'..');
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'skillwalk-api-'));
  let app;
@@ -35,11 +35,12 @@ test('loopback API admits unknown tutorials for analysis and blocks foreign orig
   const token=html.match(/name="skillwalk-token" content="([a-f0-9]+)"/)[1];
   const headers={origin,'x-skillwalk-token':token,'content-type':'application/json'};
   assert.equal((await fetch(origin+'/api/preview',{method:'POST',headers:{...headers,origin:'https://evil.test'},body:'{}'})).status,403);
-  const unknown=await fetch(origin+'/api/preview',{method:'POST',headers,body:JSON.stringify({url:'https://youtu.be/abcdefghijk'})});
-  assert.equal(unknown.status,200);
-  assert.equal((await unknown.json()).compatibility.available,true);
-  const rejected=await fetch(origin+'/api/analyze',{method:'POST',headers,body:JSON.stringify({url:'https://youtu.be/abcdefghijk'})});
-  assert.equal(rejected.status,202);assert.deepEqual(dispatched,{kind:'generic',tutorial:'abcdefghijk'});
+  for(const tutorial of ['abcdefghijk','nkluXCISryk']){
+    const request={method:'POST',headers,body:JSON.stringify({url:'https://youtu.be/'+tutorial})};
+    assert.equal((await fetch(origin+'/api/preview',request)).status,422);
+    assert.equal((await fetch(origin+'/api/analyze',request)).status,422);
+    assert.equal(dispatched,undefined);
+  }
   for (const [tutorial,kind] of [['372Iksaz8b0','presentation'], ['DVlHZufvP10','website'], ['hBDNv47KCKo','document']]) {
     await new Promise(resolve => setImmediate(resolve));
     const response = await fetch(origin+'/api/analyze', {method:'POST', headers, body:JSON.stringify({url:'https://youtu.be/'+tutorial})});
