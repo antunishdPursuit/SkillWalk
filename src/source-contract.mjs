@@ -11,7 +11,7 @@ export function contractSchema(ids) {
   return object({
     summary: {type: 'string'},
     requirements: array(object({description: {type: 'string'}, capability: {type: 'string', enum: capabilities}, required: {type:'boolean'}, segment_id: citation})),
-    steps: array(object({action: {type: 'string'}, segment_id: citation})),
+    steps: array(object({action: {type: 'string'}, required:{type:'boolean'}, segment_id: citation})),
     // Keep the inference grammar simple; validate text lengths after decoding.
     // The local runtime does not reliably constrain regex-bearing schemas.
     content: array(object({text: {type: 'string'}, selector: {type: 'string'}, segment_id: citation})),
