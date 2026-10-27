@@ -4,7 +4,7 @@ export function normalizeHTML(text){return text.trim().replace(/^```(?:html)?\s*
 // contexts stay conservative: a <style> string in script, title, attributes or
 // comments must never hide active markup from the policy scan.
 function withoutStyleComments(html){
- return html.replace(/^(\s*(?:<!doctype\s+html\s*>\s*)?<html\b(?:[^"'<>]|"[^"]*"|'[^']*')*>\s*<head>\s*(?:(?:<meta\b(?:[^"'<>]|"[^"]*"|'[^']*')*>|<title>[^<]*<\/title>)\s*)*<style\b(?:[^"'<>]|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/style\s*>)/i,(_,open,css,close)=>{
+ return html.replace(/^(\s*(?:<!doctype\s+html\s*>\s*)?<html(?=[\t\n\f\r />])(?:[^"'<>]|"[^"]*"|'[^']*')*>\s*<head>\s*(?:(?:<meta(?=[\t\n\f\r />])(?:[^"'<>]|"[^"]*"|'[^']*')*>|<title>[^<]*<\/title>)\s*)*<style(?=[\t\n\f\r />])(?:[^"'<>]|"[^"]*"|'[^']*')*>)((?:(?!<\/style(?=[\t\n\f\r />]))[\s\S])*)(<\/style\s*>)/i,(_,open,css,close)=>{
   let out='',quote=null;
   for(let i=0;i<css.length;i++){
    const c=css[i];
