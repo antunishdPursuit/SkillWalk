@@ -2,6 +2,7 @@
 import csv
 import io
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -45,18 +46,53 @@ def ocr_pass(image, modes=(6, 11)):
             'text': observations[0]['text'] if readable else None}
 
 
+def mark_inventory(image):
+    """Account for all pixels differing from the median background, including single pixels."""
+    pixels = np.asarray(image)
+    bg = np.median(pixels.reshape(-1, 3), axis=0)
+    marks = np.any(pixels != bg, axis=2).astype('uint8')
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(marks, connectivity=8)
+    border_mask = np.zeros(marks.shape, dtype='uint8')
+    entries = []
+    if count > 401:
+        return border_mask, labels, [{'kind':'unresolved', 'reason':'Component budget exceeded',
+            'pixels':int(marks.sum()), 'componentCount':count-1}], marks
+    for index, (x,y,w,h,area) in enumerate(stats[1:], 1):
+        x,y,w,h,area = map(int, (x,y,w,h,area))
+        component = labels[y:y+h,x:x+w] == index
+        # Only a complete, isolated rectangular outline. Attached marks or filled shapes fail.
+        rectangle = False
+        if w >= 40 and h >= 18:
+            inside = component[2:-2,2:-2]
+            sides = [component[:2].any(axis=0), component[-2:].any(axis=0),
+                     component[:,:2].any(axis=1), component[:,-2:].any(axis=1)]
+            corners = [component[:2,:2],component[:2,-2:],component[-2:,:2],component[-2:,-2:]]
+            rectangle = not inside.any() and all(side.all() for side in sides) and all(c.any() for c in corners)
+        if rectangle:
+            border_mask[labels == index] = 255
+        entries.append({'id':index,'bounds':[x,y,x+w,y+h],'pixels':area,
+                        'kind':'outline-candidate' if rectangle else 'unresolved',
+                        'classificationStatus':'unverified',
+                        'reason':'Geometric outline only; may be a meaningful icon or glyph; retained in raw appearance checks' if rectangle else 'No independent non-text classification'})
+    return border_mask, labels, entries, marks
+
+
 def region_ocr(image):
     """Source-only text proposals; diagnostic evidence, never an acceptance override."""
     gray = np.asarray(image.convert('L'))
     ink = (gray < 180).astype('uint8') * 255
-    horizontal = cv2.morphologyEx(ink, cv2.MORPH_OPEN, np.ones((1, 40), np.uint8))
-    vertical = cv2.morphologyEx(ink, cv2.MORPH_OPEN, np.ones((25, 1), np.uint8))
-    lines = cv2.dilate(cv2.bitwise_or(horizontal, vertical), np.ones((3, 3), np.uint8))
-    text = cv2.subtract(ink, lines)
+    borders, mark_labels, ledger, marks = mark_inventory(image)
+    text = cv2.subtract(ink, borders)
+    accounting = {'sourcePixelHash':hashlib.sha256(np.asarray(image).tobytes()).hexdigest(),
+                  'markedPixels':int(marks.sum()),'entries':ledger,
+                  'outlineCandidatePixels':int(np.count_nonzero(borders)),
+                  'semanticallyUnresolvedPixels':int(marks.sum()),
+                  'outlineMaskHash':hashlib.sha256(borders.tobytes()).hexdigest(),
+                  'appearanceInput':'unchanged-original-image'}
     count, labels, stats, _ = cv2.connectedComponentsWithStats(text, connectivity=8)
-    components = [tuple(int(v) for v in row[:4]) for row in stats[1:] if row[4] >= 2]
+    components = [tuple(int(v) for v in row[:4]) for row in stats[1:]]
     if not components or len(components) > 400:
-        return {'status': 'unverified', 'regions': [], 'reason': 'No bounded text component inventory'}
+        return {'status': 'unverified', 'regions': [], 'accounting':accounting, 'reason': 'No bounded text component inventory'}
     # Group overlapping baselines; retain disconnected signs and dots instead of dropping them.
     groups = []
     for x, y, w, h in sorted(components, key=lambda r: (r[1], r[0])):
@@ -77,16 +113,19 @@ def region_ocr(image):
             end = max(end, edge)
         boxes.append([start, top, end, bottom])
     if len(boxes) > 12:
-        return {'status': 'unverified', 'regions': [], 'reason': 'Text region budget exceeded', 'proposedCount': len(boxes)}
+        return {'status': 'unverified', 'regions': [], 'accounting':accounting, 'reason': 'Text region budget exceeded', 'proposedCount': len(boxes)}
     regions = []
     for left, top, right, bottom in boxes:
         crop = image.crop((max(0,left-2), max(0,top-2), min(image.width,right+2), min(image.height,bottom+2)))
         padded = Image.new('RGB', (crop.width+20, crop.height+20), 'white')
         padded.paste(crop, (10,10))
         reading = ocr_pass(padded, (6,7))
+        # No mark becomes text merely because it falls inside a readable bounding box.
+        # OCR does not provide character-level attribution: retain unresolved ledger entries.
         regions.append({'bounds': [left,top,right,bottom], **reading})
     readable = bool(regions) and all(r['status']=='passed' for r in regions)
-    return {'status': 'passed' if readable else 'unverified', 'regions': regions,
+    return {'status': 'unverified', 'textReadingStatus':'passed' if readable else 'unverified', 'regions': regions,
+            'accounting':accounting,
             'text': clean(' '.join(r['text'] for r in regions)) if readable else None,
             'scope': 'detected-text-regions-only',
             'reason': 'Region detection may omit marks; diagnostics cannot override full content or coverage checks'}

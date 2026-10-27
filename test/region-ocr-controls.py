@@ -15,7 +15,8 @@ for label, value in [('negative', '-3'), ('positive', '3'), ('changed', '-8')]:
     draw.text((20,100), value, fill='black', font=font)
     report = checker.region_ocr(image)
     results.append({'label':label, **report})
-    assert report['status'] == 'passed', json.dumps(results[-1])
+    assert report['textReadingStatus'] == 'passed', json.dumps(results[-1])
+    assert report['status'] == 'unverified'  # Readable words do not attribute every pixel to a glyph.
     assert report['text'] == 'Add Subtract '+value, json.dumps(results[-1])
 assert checker.region_ocr(Image.new('RGB',(480,240),'white'))['status'] == 'unverified'
 assert len({r['text'] for r in results}) == 3
