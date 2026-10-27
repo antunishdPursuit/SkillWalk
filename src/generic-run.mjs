@@ -1,3 +1,4 @@
+import {experimentalModelEnvironment} from './experimental-model.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {DocumentRun} from './document-run.mjs';
@@ -10,6 +11,9 @@ export class GenericRun extends DocumentRun {
     super(id, notify);
     this.kind = 'generic';
     this.pipeline = 'shared-v1';
+    this.stepTimeoutMs = 45 * 60 * 1000;
+    this.modelEnvironment = experimentalModelEnvironment();
+    this.models = {text:this.modelEnvironment.GEMMA_TEXT_MODEL, vision:this.modelEnvironment.GEMMA_MODEL};
     this.tutorialId = tutorialId;
     this.artifactName = 'website.html';
   }

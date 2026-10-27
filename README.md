@@ -56,6 +56,10 @@ Featured presentation runs retain their optional direction window and saved outp
 
 ## Experimental unfamiliar-tutorial pipeline
 
+The experimental worker defaults to `gemma3:12b` for text and vision, separately from featured demonstrations. Download it explicitly into the Ollama service used by `OLLAMA_BASE` before running unfamiliar tutorials. The download is approximately 8.2 GB; runtime memory and latency also depend on context length and GPU memory. No model is downloaded automatically and no cloud fallback is used.
+
+Set `EXPERIMENTAL_OLLAMA_BASE` to a local loopback service and `EXPERIMENTAL_GEMMA_MODEL` to an installed Gemma model to override this trial profile. The larger model is a test candidate, not a guarantee of fidelity or reliability.
+
 Unfamiliar URLs use captions, nine uniformly sampled frames, offline OCR and local vision. Public GitHub or CodePen source linked by the creator can supplement that evidence; inaccessible links are recorded, not bypassed. GitHub material is pinned and hashed. Downloaded source is untrusted data and is never executed on the host.
 
 Local Gemma extracts source-cited requirements, operations, literal content, CSS assertions and interactions. A finite capability check selects standalone offline HTML/CSS/JavaScript or the full isolated multimodal document adapter. Unknown services, credentials and unsupported operations remain explicit compatibility failures. Document configuration comes from the source; its Python implementation is the audited reusable adapter.
