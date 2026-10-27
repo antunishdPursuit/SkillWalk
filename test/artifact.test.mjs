@@ -6,6 +6,9 @@ test('inert CSS policy commentary does not cause a false network rejection',()=>
  assert.ok(artifactIssues(wrap('body{content:"/*";background:url(https://example.com/image.png)}')).length);
  assert.ok(artifactIssues(wrap('/* </style><script src="https://example.com/run.js"></script><style> */')).length);
  assert.ok(artifactIssues(wrap('/* unclosed </style><iframe src="/x"></iframe><style>')).length);
+ for(const prefix of ['<script>const x="<style>/*";</script>', '<!-- <style>/* -->', '<div data-note="<style>/*">', '<head><title><style>/*</title></head>']){
+  assert.ok(artifactIssues('<html>'+prefix+'<script src="https://example.com/x.js"></script>*/</style></html>').length);
+ }
 });
 test('reject the actual generated remote-font regression',()=>{assert.ok(artifactIssues('<!doctype html><html><head><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f=DejaVu"></head></html>').some(x=>x.includes('Unsupported network')));});
 test('allow local inline presentation markup without altering it',()=>{const html='<!doctype html><html><style>body{font-family:"DejaVu Serif",serif}</style><body><section>Local</section><script>document.body.dataset.ready="true"</script></body></html>';assert.deepEqual(artifactIssues(html),[]);assert.equal(normalizeHTML('```html\n'+html+'\n```'),html);});

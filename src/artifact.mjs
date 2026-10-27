@@ -1,9 +1,10 @@
 export function normalizeHTML(text){return text.trim().replace(/^```(?:html)?\s*/i,'').replace(/\s*```$/,'');}
 
-// Ignore inert CSS comments only inside HTML style elements. Quoted CSS strings
-// and HTML's raw-text closing tag remain authoritative, including inside comments.
+// Only strip comments from an unambiguous leading head stylesheet. Other HTML
+// contexts stay conservative: a <style> string in script, title, attributes or
+// comments must never hide active markup from the policy scan.
 function withoutStyleComments(html){
- return html.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi,(_,open,css,close)=>{
+ return html.replace(/^(\s*(?:<!doctype\s+html\s*>\s*)?<html\b(?:[^"'<>]|"[^"]*"|'[^']*')*>\s*<head>\s*(?:(?:<meta\b(?:[^"'<>]|"[^"]*"|'[^']*')*>|<title>[^<]*<\/title>)\s*)*<style\b(?:[^"'<>]|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/style\s*>)/i,(_,open,css,close)=>{
   let out='',quote=null;
   for(let i=0;i<css.length;i++){
    const c=css[i];
