@@ -1,3 +1,21 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {validateGenericPlan} from '../src/generic-proof.mjs';
-const segments=[{id:'s0',start:3,text:'Create a page titled Example and show a button.'}];
-test('generic plans must cite exact source and provide visible checks',()=>{const plan={supported:true,summary:'Build a page',steps:[{action:'Create a page',segment_id:'s0',quote:'page titled Example'}],interactive:true,checks:[{type:'click',target:'Go',expected:'Example',segment_id:'s0',quote:'show a button'}]};assert.deepEqual(validateGenericPlan(plan,segments),[]);assert.equal(plan.steps[0].timestamp,3);assert.notDeepEqual(validateGenericPlan({...plan,steps:[{...plan.steps[0],quote:'invented'}]},segments),[]);assert.notDeepEqual(validateGenericPlan({...plan,checks:[]},segments),[]);assert.notDeepEqual(validateGenericPlan({...plan,checks:[{...plan.checks[0],type:'visible'}]},segments),[]);assert.notDeepEqual(validateGenericPlan({...plan,supported:false},segments),[])});
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateGenericPlan} from '../src/generic-proof.mjs';
+
+const segments = [{id: 's0', start: 3, text: 'Create a page titled Example and show a button.'}];
+
+test('generic plans must cite exact source and provide visible checks', () => {
+  const plan = {
+    supported: true, summary: 'Build a page', interactive: true,
+    requirements: [{description: 'HTML page', available: true, segment_id: 's0', quote: 'Create a page'}],
+    steps: [{action: 'Create a page', segment_id: 's0', quote: 'page titled Example'}],
+    checks: [{type: 'click', target: 'Go', expected: 'Example', segment_id: 's0', quote: 'show a button'}]
+  };
+  assert.deepEqual(validateGenericPlan(plan, segments), []);
+  assert.equal(plan.steps[0].timestamp, 3);
+  assert.notDeepEqual(validateGenericPlan({...plan, steps: [{...plan.steps[0], quote: 'invented'}]}, segments), []);
+  assert.notDeepEqual(validateGenericPlan({...plan, checks: []}, segments), []);
+  assert.notDeepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], type: 'visible'}]}, segments), []);
+  assert.notDeepEqual(validateGenericPlan({...plan, supported: false}, segments), []);
+  assert.notDeepEqual(validateGenericPlan({...plan, requirements: [{...plan.requirements[0], available: false}]}, segments), []);
+});
