@@ -30,3 +30,10 @@ test('frame-observation citations retain their provenance', () => {
   assert.deepEqual(validateGenericPlan(plan, [frame]), []);
   assert.equal(plan.steps[0].sourceKind, 'frame-observation');
 });
+
+test('unsupported interactive plans retain their explicit incompatibility', () => {
+  const plan = {supported: false, interactive: true, summary: 'Requires an unavailable backend',
+    requirements: [{description: 'Backend', available: false, segment_id: 's0', quote: 'Create a page'}],
+    steps: [], checks: []};
+  assert.deepEqual(validateGenericPlan(plan, segments), []);
+});

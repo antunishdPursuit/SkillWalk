@@ -7,6 +7,7 @@ import {root, outputDir, verificationDir, sha256, json} from './util.mjs';
 const profile = await ensureSandboxProfile();
 await fs.mkdir(verificationDir, {recursive: true});
 const hash = sha256(await fs.readFile(path.join(outputDir, 'website.html')));
+await json(path.join(verificationDir, 'generic-report.json'), {passed: false, checks: [], failure: 'Browser did not complete verification'});
 const image = 'mcr.microsoft.com/playwright:v1.64.0-noble';
 const args = [
   'run', '--rm', '--network', 'none', '--read-only', '--cap-drop', 'ALL',
@@ -33,4 +34,5 @@ if (sha256(await fs.readFile(path.join(outputDir, 'website.html'))) !== hash) {
   report.failure = 'Artifact changed during browser verification';
 }
 await json(path.join(verificationDir, 'generic-report.json'), report);
+if (code) { report.passed = false; report.failure ||= 'Browser exited without completing verification'; await json(path.join(verificationDir, 'generic-report.json'), report); }
 if (code || !report.passed) process.exitCode = 1;

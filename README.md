@@ -1,6 +1,6 @@
 # SkillWalk
 
-Watch a YouTube tutorial become a working local result. SkillWalk reads a reviewed video's captions, frames and source materials, prepares a plan with local Gemma, then runs the workflow, browser checks and bounded repairs.
+Watch a YouTube tutorial become a working local result. SkillWalk reads a tutorial's captions and sampled frames, prepares a plan with local Gemma, then runs supported workflows, browser checks and bounded repairs.
 
 **Approve once, then watch.** The main tutorial builds a PDF question-answering app. Two alternatives create an HTML presentation or a homepage. There is no paid model API, account requirement or deployment.
 
@@ -42,7 +42,7 @@ Setup builds `skillwalk-document:local` and prepares the version-matched, hash-v
 
 ## Use SkillWalk
 
-1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Unreviewed videos can be previewed but cannot execute yet.
+1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Unfamiliar videos enter experimental source analysis for self-contained offline HTML tasks; compatibility is decided after analysis.
 2. Watch the source analysis, then review the plan, supplied sample and model differences. No writing or content upload is required for the demonstration.
 3. The execution overview has a disclosed ten-second approval countdown with **Pause** and **Start now**. Leaving, hiding or reloading this view pauses approval.
 4. After approval, execution continues without another required click, including if the viewer disconnects. Follow the actual browser activity, checks and repairs.
@@ -51,6 +51,12 @@ Setup builds `skillwalk-document:local` and prepares the version-matched, hash-v
 **Stop** prevents subsequent steps after the current operation finishes safely, including delivery after a final check. A request after completion returns an explicit already-finished response. Failed or interrupted runs are labelled; they do not become verified results.
 
 The presentation workflow has a seven-second optional direction window. Doing nothing selects its checked recommendation on the server. Inline slide edits produce a separate copy that has **not** been re-tested.
+
+## Experimental unfamiliar tutorials
+
+The generic path attempts source-derived HTML/CSS/JavaScript artifacts that work offline in a sandboxed browser. It uses local Gemma to assess cited requirements, interpret sampled frames, create a plan and generate a standalone file. It explicitly rejects requirements it assesses as unavailable, such as a backend, external service, credentials or external assets. The model can miss or misunderstand requirements; review the plan and compare the result with the source. Frame descriptions are model interpretations, not transcripts.
+
+Media acquisition accepts durations from 20 seconds to one hour, filters individual downloads at 128 MiB, monitors media files against a 256 MiB limit at 100 ms intervals, and rejects oversized cached or final media. The monitored limit can overshoot between checks. English captions are required. Four sampled frames may miss important details, including a final result. Browser checks cover cited visible text or button interactions and console messages, runtime errors, network attempts and horizontal overflow; these do not prove complete source fidelity. Tests with synthetic fixtures are not real-model or unfamiliar-tutorial evidence. This experimental path does not establish support for all compatible tutorials or meet the broader original outcome on its own.
 
 ## Reviewed tutorials
 

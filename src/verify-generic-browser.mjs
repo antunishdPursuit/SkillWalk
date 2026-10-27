@@ -9,7 +9,7 @@ const report = {checks: [], errors: [], blocked: [], isolation: {network: 'none'
 const event = (type, data = {}) => console.log('@@SKILLWALK ' + JSON.stringify({type, ...data}));
 const server = http.createServer((req, res) => {
   res.setHeader('content-type', 'text/html');
-  res.setHeader('content-security-policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'");
+  res.setHeader('content-security-policy', "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'");
   res.end(html);
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -36,9 +36,12 @@ try {
   await page.goto(origin + '/');
   for (const check of plan.checks) {
     if (check.type === 'click_console') {
+      const escaped = RegExp.escape(check.target);
+      const target = page.getByRole('button', {name: new RegExp('^' + escaped + '$', 'i')});
+      assert.equal(await target.count(), 1, 'Missing button label: ' + check.target);
       const pending = page.waitForEvent('console', {predicate: message =>
         message.type() === 'log' && message.text() === check.expected, timeout: 5000});
-      await Promise.all([pending, page.getByRole('button', {name: check.target, exact: true}).click({timeout: 5000})]);
+      await Promise.all([pending, target.click({timeout: 3000})]);
       const label = 'Clicked ' + check.target + '; console: ' + check.expected;
       report.checks.push(label);
       event('check', {check: label});
