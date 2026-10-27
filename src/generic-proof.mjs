@@ -1,3 +1,4 @@
+import {inspectCreatorRender} from './creator-render.mjs';
 import {analyzeSourceContract} from './analyze-source.mjs';
 import {acquireCreatorMaterials, bundleCreatorHTML} from './creator-materials.mjs';
 import {inspectSource} from './source-inspection.mjs';
@@ -105,7 +106,7 @@ async function main() {
   if (phase === 'analyze') {
     const materials = await acquireCreatorMaterials(evidence.metadata, outputDir);
     const inspection = await inspectSource(evidence, outputDir);
-    const plan = await analyzeSourceContract(evidence, inspection, materials);
+    const plan = await analyzeSourceContract(evidence, inspection, materials, {inspectCreator:(entry,files)=>inspectCreatorRender(entry,files,outputDir)});
     plan.sourceVideoId = evidence.metadata.id;
     plan.videoHash = evidence.video.sha256;
     await json(path.join(outputDir, 'plan.json'), plan);
