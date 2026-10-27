@@ -1,6 +1,9 @@
+import {compatibilityNotice, failureMessage} from '/run-messages.mjs';
 import {Countdown} from '/countdown.mjs';import {assessBrief} from '/readiness.mjs';import{executionInfo,stagesFor,stageFor,operationLabel,outputTarget,appendOperation,practiceFor}from '/workspace.mjs';
 
-const $=id=>document.getElementById(id);let run=null,preview=null,source=null,manualHold=false,drawSeq=0,frames=0,submitting=false,setupEditing=false,userPage=location.pathname!=="/execution",shown=new Set(),filledRun=null,phaseStarted=Date.now(),lastOutput=0,connected=true;const token=document.querySelector('meta[name=skillwalk-token]').content;
+const $=id=>document.getElementById(id);
+$('compatibility-notice').textContent=compatibilityNotice;
+let run=null,preview=null,source=null,manualHold=false,drawSeq=0,frames=0,submitting=false,setupEditing=false,userPage=location.pathname!=="/execution",shown=new Set(),filledRun=null,phaseStarted=Date.now(),lastOutput=0,connected=true;const token=document.querySelector('meta[name=skillwalk-token]').content;
 
 let pendingAnalyze=null,automaticReviewRunId=null,overviewStartedFor=null,viewMode='preview',practiceKey='',renderedOperations='';
 const activeStates=['analyzing','previewing','preview-testing','generating','testing','repairing','choosing'];let styleShown='',exportRequest=null,editedRun=null;
@@ -67,7 +70,7 @@ function renderRun(){
  $('analysis-title').textContent=run.status==='analyzing'?'Understanding your tutorial':'Your tutorial, understood.';if(!run.plan)$('analysis-summary').textContent='Gemma is reading actual frames, captions and source materials for the selected tutorial. The workflow will appear after analysis.';
  if(run.plan){$('analysis-summary').textContent=run.kind==='generic'?(run.plan.summary||'Source-derived local HTML task.'):documentTask?(run.plan.summary||'Follow the complete local document-questioning tutorial: text, images, tables, embeddings, retrieval and answers.'):website?'The video compares a Laravel homepage before and after frontend-design. This run recreates its frontend task as a local website.':'The video demonstrates frontend-slides. This run creates a local presentation, tests it, and lets you save a copy.';$('plan').replaceChildren();for(const step of run.plan.steps){const li=document.createElement('li');li.append(document.createTextNode(labels[step.action]||step.action));const p=document.createElement('p');p.textContent=`${step.sourceKind==='frame-observation'?'Model interpretation of video frame':'Video caption'} ${Math.floor(step.timestamp/60)}:${String(Math.floor(step.timestamp%60)).padStart(2,'0')} · ${step.quote}`;li.append(p);$('plan').append(li);}}
  if(run.status==='review')notice('Analysis ready. Your short task review is on Execution.');
- if(['failed','stopped'].includes(run.status)){$('execution-error').textContent=run.failure||run.stage;notice(run.failure||run.stage,true);countdown.pause();}
+ if(['failed','stopped'].includes(run.status)){$('execution-error').textContent=failureMessage(run.failure||run.stage,{stopped:run.status==='stopped'});notice(run.failure||run.stage,true);countdown.pause();}
  $('edit-notice').hidden=!presentation||run.status!=='complete';$('result-actions').hidden=run.status!=='complete';
  if(run.status==='complete'){$('download').href='/api/result?id='+encodeURIComponent(run.id)+'&download=1';$('download').textContent=documentTask?'Download checked app source':run.kind==='generic'?'Download checked HTML':website?'Download verified website':'Download verified presentation';if(run.failure){$('last-failure').hidden=false;$('last-failure').textContent='Recovered and verified. Previous check: '+run.failure.split('\n')[0];$('last-failure').className='recovered';}}
  const busy=activeStates.includes(run.status);for(const id of ['video-url','preview-button','document-link','supported-link','frontend-link','sample'])$(id).disabled=busy;for(const el of $('brief-form').elements)el.disabled=run.status!=='review';
