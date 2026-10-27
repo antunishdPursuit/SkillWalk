@@ -1,4 +1,12 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {normalizeHTML,artifactIssues} from '../src/artifact.mjs';
+test('inert CSS policy commentary does not cause a false network rejection',()=>{
+ const wrap=css=>'<html><head><style>'+css+'</style></head><body>Local</body></html>';
+ assert.deepEqual(artifactIssues(wrap('/* No @import url() as per instructions to remove external network calls */ body{color:black}')),[]);
+ assert.ok(artifactIssues(wrap('/* comment */ @import "https://example.com/font.css";')).length);
+ assert.ok(artifactIssues(wrap('body{content:"/*";background:url(https://example.com/image.png)}')).length);
+ assert.ok(artifactIssues(wrap('/* </style><script src="https://example.com/run.js"></script><style> */')).length);
+ assert.ok(artifactIssues(wrap('/* unclosed </style><iframe src="/x"></iframe><style>')).length);
+});
 test('reject the actual generated remote-font regression',()=>{assert.ok(artifactIssues('<!doctype html><html><head><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f=DejaVu"></head></html>').some(x=>x.includes('Unsupported network')));});
 test('allow local inline presentation markup without altering it',()=>{const html='<!doctype html><html><style>body{font-family:"DejaVu Serif",serif}</style><body><section>Local</section><script>document.body.dataset.ready="true"</script></body></html>';assert.deepEqual(artifactIssues(html),[]);assert.equal(normalizeHTML('```html\n'+html+'\n```'),html);});
 test('reject incomplete artifacts and active external embedding',()=>{assert.ok(artifactIssues('<html><body>unfinished').length);assert.ok(artifactIssues('<html><iframe src="/x"></iframe></html>').length);});
