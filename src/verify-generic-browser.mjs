@@ -38,8 +38,7 @@ try {
     if (check.type === 'click_console') {
       const pending = page.waitForEvent('console', {predicate: message =>
         message.type() === 'log' && message.text() === check.expected, timeout: 5000});
-      await page.getByRole('button', {name: check.target, exact: true}).click();
-      await pending;
+      await Promise.all([pending, page.getByRole('button', {name: check.target, exact: true}).click({timeout: 5000})]);
       const label = 'Clicked ' + check.target + '; console: ' + check.expected;
       report.checks.push(label);
       event('check', {check: label});
