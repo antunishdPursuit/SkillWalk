@@ -52,7 +52,7 @@ try {
       assert.equal(alreadyVisible, false, 'Interaction result was already visible');
       await page.getByRole('button', {name: check.target, exact: true}).click();
     }
-    assert.ok(await page.getByText(check.expected, {exact: false}).first().isVisible(),
+    assert.ok(await page.getByText(check.expected, {exact: true}).first().isVisible(),
       'Missing visible source requirement: ' + check.expected);
     const label = (check.type === 'click' ? 'Clicked ' + check.target + '; visible: ' : 'Visible: ') + check.expected;
     report.checks.push(label);
