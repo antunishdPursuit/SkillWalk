@@ -150,7 +150,7 @@ if question:
     with st.chat_message("assistant"):
         with st.spinner("Retrieving document evidence and asking local Gemma"):
             related=store.similarity_search(question,k=8)
-            instructions=CONFIG["answerInstruction"]+" Answer only the requested question. If the context has no evidence that answers the requested question, respond with exactly: I do not know. In that unsupported case, add no summary of unrelated context, explanation, or other facts. Never substitute unrelated document numbers. Prefer extracted PDF text/table evidence over a conflicting model-derived description. Use three sentences maximum."
+            instructions=CONFIG["answerInstruction"]+" Answer only the requested question. If the context has no evidence that answers the requested question, respond with exactly: I do not know. In that unsupported case, add no summary of unrelated context, explanation, or other facts. When the retrieved evidence does answer the question, give that supported answer directly; do not append an unsupported-question refusal to it. Never substitute unrelated document numbers. Prefer extracted PDF text/table evidence over a conflicting model-derived description. Use three sentences maximum."
             budget=6000-len((instructions+question).encode("utf-8"))
             if budget<512:st.error("Shorten the question to leave room for document evidence.");st.stop()
             sent=[];passages=[];used=0

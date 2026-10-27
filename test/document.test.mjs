@@ -123,3 +123,12 @@ test('featured recipes and unfamiliar execution have explicit separate routes',(
  for(const entry of tutorials){const route=compatibilityFor(entry.id);assert.equal(route.kind,entry.kind);assert.equal(route.pipeline,'featured-v1');assert.equal(route.featured,true);}
  const route=compatibilityFor('abcdefghijk');assert.equal(route.kind,'generic');assert.equal(route.pipeline,'shared-v1');assert.equal(route.featured,false);
 });
+
+test('supported document answers cannot append an unqualified refusal',()=>{
+ const evidence=[{kind:'Gemma description of Image',text:'Germany 80 million; Egypt 100 million'},{kind:'Table',text:'United States 332 million'}];
+ assert.equal(checkDocumentAnswer(0,{answer:'Germany has 80 million people. I do not know.',evidence}),false);
+ const answer='United States has 332 million people. Egypt has 100 million. United States has a larger population than Egypt.';
+ assert.equal(checkDocumentAnswer(1,{answer,evidence}),true);
+ assert.equal(checkDocumentAnswer(1,{answer:answer+' I do not know.',evidence}),false);
+ assert.equal(checkDocumentAnswer(0,{answer:'Germany has 80 million people. I do not know the year.',evidence}),true);
+});

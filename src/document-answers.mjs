@@ -1,6 +1,10 @@
 export function checkDocumentAnswer(index,result){
  const answer=String(result?.answer||'').replace(/[*_]/g,'').toLowerCase(),evidence=result?.evidence||[];
  if(!answer||!evidence.length)return false;
+ // A supported answer followed by a bare refusal is contradictory, even when
+ // it also contains the expected figures. Qualified uncertainty (e.g. the year)
+ // is different and remains subject to the question-specific checks below.
+ if((index===0||index===1)&&/(?:^|[.!?]\s*)(?:i\s+)?(?:do not|don't) know(?:[.!?]|$)/.test(answer))return false;
  if(index===0)return !/touris|exports?|receipts|not (?:its|the) population|do not know (?:the )?population|cannot (?:determine|provide)[^.!?]{0,40}population/.test(answer)&&!(/france|egypt|japan|united states/.test(answer)&&!/germany/.test(answer))&&/\b(?:7[5-9]|8\d|90)(?:\.\d+)?\s*million/.test(answer)&&evidence.some(e=>e.kind?.includes('Image')&&/germany/i.test(e.text||''));
  if(index===1){
   const us=answer.match(/united states[^\d]{0,90}(\d+(?:\.\d+)?)\s*million/),egypt=answer.match(/egypt[^\d]{0,90}(\d+(?:\.\d+)?)\s*million/);
