@@ -22,3 +22,10 @@ test('all sources receive early, middle and late frame coverage', () => {
   assert.deepEqual(inspectionTimes(100), [6, 18, 32, 46, 60, 74, 86, 94, 98]);
   assert.throws(() => inspectionTimes(4000));
 });
+test('a contract rejects incompatible final styles but permits a later return to initial content',()=>{
+  const plan=valid();plan.styles.push({...plan.styles[0],value:'red'});
+  assert.match(validateContract(plan,source).join(';'),/Conflicting final style/);assert.equal(plan.supported,false);
+  const interactive=valid();interactive.requirements.push({description:'Click',capability:'browser-javascript',segment_id:'s0'});
+  interactive.interactions=[{type:'click',target:'Run',expected:'Hello',resultSelector:'h1',segment_id:'s0'}];
+  assert.deepEqual(validateContract(interactive,source),[]); // Transition timing is checked against the actual DOM, not initial text alone.
+});

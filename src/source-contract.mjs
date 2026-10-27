@@ -17,7 +17,7 @@ export function contractSchema(ids) {
     content: array(object({text: {type: 'string'}, selector: {type: 'string'}, segment_id: citation})),
     styles: array(object({selector: {type: 'string'}, property: {type: 'string', enum: cssProperties}, value: {type: 'string'}, segment_id: citation})),
     structure: array(object({selector: {type: 'string'}, minimum: {type: 'integer', minimum: 1, maximum: 100}, segment_id: citation})),
-    interactions: array(object({type: {type: 'string', enum: ['click', 'click_console', 'keypress']}, target: {type: 'string'}, expected: {type: 'string'}, segment_id: citation})),
+    interactions: array(object({type: {type: 'string', enum: ['click', 'click_console', 'keypress']}, target: {type: 'string'}, expected: {type: 'string'}, resultSelector:{type:'string'}, segment_id: citation})),
     referenceFrames: array(citation), uncertainty: {type: 'string'}
   });
 }
@@ -37,6 +37,12 @@ export function validateContract(contract, sources) {
   if (!contract.requirements?.length || !contract.steps?.length || !contract.summary?.trim()) errors.push('Missing task requirements');
   for (const r of contract.requirements || []) if (!capabilities.includes(r.capability)) errors.push('Unknown capability');
   for (const s of contract.styles || []) if (!cssProperties.includes(s.property) || !s.value?.trim() || s.value.length > 120) errors.push('Invalid style requirement');
+  const styleValues=new Map();
+  for(const item of contract.styles||[]){
+    const key=item.selector+' '+item.property,value=String(item.value).trim().toLowerCase();
+    if(styleValues.has(key)&&styleValues.get(key)!==value)errors.push('Conflicting final style: '+key);
+    styleValues.set(key,value);
+  }
   for (const s of contract.structure || []) if (!Number.isInteger(s.minimum) || s.minimum < 1 || s.minimum > 100) errors.push('Invalid structure count');
   for (const c of contract.content || []) if (!c.text?.trim() || c.text.length > 1500) errors.push('Invalid required content');
   for (const c of contract.interactions || []) if (!['click', 'click_console', 'keypress'].includes(c.type) || !c.target || !c.expected) errors.push('Invalid interaction');

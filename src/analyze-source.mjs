@@ -1,3 +1,4 @@
+import {frameEvidence} from './source-frame.mjs';
 import {callModel} from './model.mjs';
 import {contractSchema, validateContract, documentCapabilities} from './source-contract.mjs';
 
@@ -11,7 +12,7 @@ export async function analyzeSourceContract(evidence, inspection, materials) {
   // captions before consulting source files; auxiliary scripts are not the task.
   const materialIndex = JSON.stringify(materials.files.map(({id,name})=>({id,name})));
   const code = JSON.stringify(materials.files.filter(f=>/\.(?:html?|css|js)$/i.test(f.name)).map(({id, name, text}) => ({id, name, text: text.slice(0, 16000)})));
-  const frames = JSON.stringify(inspection.frames.map(({id, timestamp, ocr, visibleText, appearance}) => ({id, timestamp, ocr, visibleText, appearance})));
+  const frames = JSON.stringify(inspection.frames.map(frameEvidence));
   async function part(name, fields, instruction, data, predict) {
     const partial = {type: 'object', additionalProperties: false, properties: Object.fromEntries(fields.map(field => [field, schema.properties[field]])), required: fields};
     let error = '';
@@ -30,17 +31,24 @@ export async function analyzeSourceContract(evidence, inspection, materials) {
   const document = plan.requirements.some(r => r.required!==false && documentCapabilities.includes(r.capability));
   if (document) Object.assign(plan, {content: [], styles: [], structure: [], interactions: [], referenceFrames: [], uncertainty: 'Document sample and UI fidelity require separate runtime comparison.'});
   else {
+    let consistencyFeedback='';
+    for(let extractionAttempt=0;extractionAttempt<2;extractionAttempt++){
     Object.assign(plan, await part('content', ['content', 'structure'],
-      'Extract ALL final rendered content and semantic HTML structure. Each content item is ONE HTML element text, not an entire list or screen. Independent example: <h2>Sample title</h2><p>Some content</p> gives separate {text:"Sample title",selector:"h2"} and {text:"Some content",selector:"p"}. Do not put a heading inside a list selector. Only include literal artifact text, never spoken explanations, code, editor chrome or the video title unless actually in the artifact. Preserve capitalization. Later final states supersede earlier intermediate text; deduplicate repeated content. Select simple semantic CSS selectors; avoid nth-child when siblings use alternating tags. Preserve the source heading level. Include entire definitions, captions and labels when legible; do not use placeholders. OCR may have errors: reconcile code and later frames. Use structure for required HTML element counts. Do not infer missing words from general knowledge.',
+      'Extract the completed artifact\'s initial rendered content BEFORE user interaction, and its semantic HTML structure. Do not require post-click results to be visible before the click. Exclude intermediate prototypes and separate example pages replaced later in the tutorial. Each content item is ONE HTML element text, not an entire list or screen. Independent example: <h2>Sample title</h2><p>Some content</p> gives separate {text:"Sample title",selector:"h2"} and {text:"Some content",selector:"p"}. Do not put a heading inside a list selector. Only include literal artifact text, never spoken explanations, code, editor chrome or the video title unless actually in the artifact. Preserve capitalization. Deduplicate repeated content. Select simple semantic CSS selectors; avoid nth-child when siblings use alternating tags. Preserve the source heading level. Include entire definitions, captions and labels when legible; do not use placeholders. OCR may have errors: reconcile code and later frames. Use structure for required HTML element counts. Do not infer missing words from general knowledge. ' + consistencyFeedback,
       'Creator code: ' + code + '\nFrame evidence (literal on-screen text, not narration): ' + frames, 3500));
     Object.assign(plan, await part('styles', ['styles', 'referenceFrames', 'uncertainty'],
-      'Extract final ARTIFACT CSS style assertions with correct selectors. Editor syntax colors, application chrome and video overlays are NOT page styles. Prefer literal source CSS over visual guesses. For a declaration border: 3px solid black, use border-top-width=3px, border-top-style=solid, border-top-color=black, never border-radius. Source body defaults are black text on white, serif, unless overridden; do not mistake the editor dark theme for body background. Use CSS color names/hex, valid px values and simple selectors. referenceFrames should include only the latest one or two images showing the resulting artifact, not editor-only images. Explicitly report unreadable or uncertain source details.',
+      'Extract final ARTIFACT CSS style assertions with correct selectors. Each selector/property must have ONE final value, not a history of changes. Later source declarations supersede earlier experiments. Editor syntax colors, application chrome and video overlays are NOT page styles. Prefer literal source CSS over visual guesses. For a declaration border: 3px solid black, use border-top-width=3px, border-top-style=solid, border-top-color=black, never border-radius. Source body defaults are black text on white, serif, unless overridden; do not mistake the editor dark theme for body background. Use CSS color names/hex, valid px values and simple selectors. referenceFrames should include only the latest one or two images showing the resulting artifact, not editor-only images. Explicitly report unreadable or uncertain source details. '+consistencyFeedback,
       'Captions: ' + captions + '\nCreator code: ' + code + '\nFrame evidence: ' + frames, 1700));
     plan.interactions = [];
-    if (plan.requirements.some(r => ['browser-javascript', 'slides'].includes(r.capability))) {
+    if (plan.requirements.some(r => r.required!==false && ['browser-javascript', 'slides'].includes(r.capability))) {
+      schema.properties.interactions.minItems=1;
       Object.assign(plan, await part('interactions', ['interactions'],
-        'Extract actual end-user interactions in executable order. click target is a literal visible button label; expected is exact visible text AFTER clicking. click_console expects exact logged output. keypress target is a browser key such as ArrowRight; expected is the new visible text. Do not invent clicks for static content. Never use an element selector or prose description as the button label. One assertion per action, no repeated clicks merely to check fragments of one message. Return [] if no interaction is demonstrated.',
-        'Captions: ' + captions + '\nCreator code: ' + code + '\nFrame evidence: ' + frames, 1300));
+        'Extract actual end-user interactions in executable order. click target is a literal visible button label; expected is exact visible text AFTER clicking. click_console expects exact logged output. keypress target is a browser key such as ArrowRight; expected is the new visible text. Do not invent clicks for static content. Never use an element selector or prose description as the button label. One assertion per action, no repeated clicks merely to check fragments of one message. resultSelector is the exact CSS selector of the changing result element shown in the source code, or empty if unknown. The expected text must transition from absent to visible inside that result element. Use literal source-code strings over caption transcription for capitalization and spacing. ' + consistencyFeedback + '',
+        'Creator HTML and JavaScript: ' + code + '\nSource operations: ' + JSON.stringify(plan.steps) + '\nActual captions: ' + captions + '\nVisible artifact labels: ' + JSON.stringify(inspection.frames.map(f=>({id:f.id,text:f.artifactOCR||f.visibleText}))), 1800));
+    }
+    const consistency=validateContract(plan,sources);
+    if(!consistency.length)break;
+    consistencyFeedback='Correct these contradictory or missing checks from the previous extraction: '+consistency.join('; ')+'.';
     }
   }
   const errors = validateContract(plan, sources);

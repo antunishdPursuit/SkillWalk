@@ -14,12 +14,12 @@ const extraction = await readJSON(path.join(runDir, 'document-data/extraction.js
 const config = await readJSON(path.join(outputDir, 'app/config.json'));
 const app = await fs.readFile(path.join(outputDir, 'app/app.py'), 'utf8');
 if (!report.passed || !report.demoAnswers?.length) throw Error('Actual document runtime checks are required');
-const references = inspection.frames.filter(f => ['artifact', 'mixed'].includes(f.view)).slice(-2);
+const references = inspection.frames.filter(f => f.artifactVerified===true && ['artifact', 'mixed'].includes(f.view)).slice(-2);
 if (!references.length) throw Error('Document source lacks a visible app reference; source fidelity is unverified');
 const images = [];
 for (const frame of references) {
-  const bytes = await fs.readFile(path.join(sourceFolder(inspection.sourceId), frame.file));
-  if (sha256(bytes) !== frame.sha256) throw Error('Source document frame changed');
+  const bytes = await fs.readFile(path.join(sourceFolder(inspection.sourceId), frame.artifactFile || frame.file));
+  if (sha256(bytes) !== (frame.artifactSha256 || frame.sha256)) throw Error('Source document frame changed');
   images.push(bytes.toString('base64'));
 }
 images.push((await fs.readFile(path.join(runDir, 'document-data/document-desktop.png'))).toString('base64'));

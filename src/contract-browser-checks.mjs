@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 export async function checkSourceContract(page, contract, record) {
   for (const item of contract.content) {
     const clean = value => value.replace(/\s+/g, ' ').trim();
+    if(item.selector==='title') {
+      assert.equal(clean(await page.title()),clean(item.text),'Incorrect source document title');
+      record('Source document title: '+item.text);
+      continue;
+    }
     const candidates = page.locator(item.selector);
     let matched = false;
     for (let i = 0; i < await candidates.count(); i++) {
@@ -34,6 +39,12 @@ export async function checkSourceContract(page, contract, record) {
     record(`Source style: ${item.selector} ${item.property} = ${item.value}`);
   }
   for (const item of contract.interactions) {
+    const result=page.locator(item.resultSelector||'body').getByText(item.expected,{exact:true});
+    if(item.type!=='click_console') {
+      let visible=false;
+      for(let i=0;i<await result.count();i++)visible ||= await result.nth(i).isVisible();
+      assert.equal(visible,false,'Expected source result was already visible before the action: '+item.expected);
+    }
     if (item.type === 'keypress') {
       await page.keyboard.press(item.target);
     } else {
@@ -49,7 +60,7 @@ export async function checkSourceContract(page, contract, record) {
       await target.click({timeout: 3000});
       await page.waitForFunction(previous => document.body.innerText !== previous, before, {timeout: 3000});
     }
-    assert.ok(await page.getByText(item.expected, {exact: true}).first().isVisible(), 'Missing source interaction result: ' + item.expected);
+    assert.ok(await result.first().isVisible(), 'Missing source interaction result: ' + item.expected);
     record(`Source interaction: ${item.target} shows ${item.expected}`);
   }
 }
