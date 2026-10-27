@@ -25,6 +25,7 @@ try {
   });
   page = await context.newPage();
   page.on('pageerror', error => report.errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
   await page.screencast.start({
     size: {width: 1280, height: 800},
     onFrame: ({data, timestamp, viewportWidth, viewportHeight}) => event('browser-frame', {
@@ -34,6 +35,16 @@ try {
   event('browser-start', {capture: 'Isolated Chromium'});
   await page.goto(origin + '/');
   for (const check of plan.checks) {
+    if (check.type === 'click_console') {
+      const pending = page.waitForEvent('console', {predicate: message =>
+        message.type() === 'log' && message.text() === check.expected, timeout: 5000});
+      await page.getByRole('button', {name: check.target, exact: true}).click();
+      await pending;
+      const label = 'Clicked ' + check.target + '; console: ' + check.expected;
+      report.checks.push(label);
+      event('check', {check: label});
+      continue;
+    }
     if (check.type === 'click') {
       const alreadyVisible = await page.getByText(check.expected, {exact: false}).first().isVisible().catch(() => false);
       assert.equal(alreadyVisible, false, 'Interaction result was already visible');

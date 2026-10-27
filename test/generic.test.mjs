@@ -15,7 +15,18 @@ test('generic plans must cite exact source and provide visible checks', () => {
   assert.equal(plan.steps[0].timestamp, 3);
   assert.notDeepEqual(validateGenericPlan({...plan, steps: [{...plan.steps[0], quote: 'invented'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, checks: []}, segments), []);
+  assert.deepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], type: 'click_console'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], type: 'visible'}]}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, supported: false}, segments), []);
   assert.notDeepEqual(validateGenericPlan({...plan, requirements: [{...plan.requirements[0], available: false}]}, segments), []);
+});
+
+test('frame-observation citations retain their provenance', () => {
+  const frame = {id: 'f1', start: 1, text: 'A button says Go', sourceKind: 'frame-observation'};
+  const plan = {supported: true, interactive: false, summary: 'Page',
+    requirements: [{description: 'Button', available: true, segment_id: 'f1', quote: 'button says Go'}],
+    steps: [{action: 'Make button', segment_id: 'f1', quote: 'button says Go'}],
+    checks: [{type: 'visible', target: '', expected: 'Go!', segment_id: 'f1', quote: 'button says Go'}]};
+  assert.deepEqual(validateGenericPlan(plan, [frame]), []);
+  assert.equal(plan.steps[0].sourceKind, 'frame-observation');
 });
