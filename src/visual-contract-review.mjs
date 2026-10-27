@@ -4,6 +4,7 @@ import {callModel} from './model.mjs';
 import {outputDir, verificationDir, readJSON, json, sha256} from './util.mjs';
 import {sourceFolder} from './tutorials.mjs';
 import {contractPromptData} from './contract-prompt.mjs';
+import {sourceFidelityPassed} from './visual-verdict.mjs';
 
 const plan = await readJSON(path.join(outputDir, 'plan.json'));
 const inspection = await readJSON(path.join(outputDir, 'source-inspection.json'));
@@ -32,11 +33,11 @@ const review = JSON.parse(await callModel('vision-source-output-comparison', [
 ], {images, schema, predict: 2200, context: 16384}));
 review.referenceFrames = references.map(f => ({id: f.id, sha256: f.sha256,artifactSha256:f.artifactSha256,artifactReview:f.artifactReview}));
 review.artifactHash = report.artifactHash;
-review.passed = review.contentMatches && review.stylingMatches && !review.uncertain && review.differences.length === 0;
+review.passed = sourceFidelityPassed(review);
 await json(path.join(verificationDir, 'source-fidelity.json'), review);
 if (!review.passed) {
   report.passed = false;
-  report.failure = 'Source fidelity failed: ' + (review.differences.join('; ') || 'Content/style comparison was uncertain');
+  report.failure = 'Source fidelity failed: ' + (Array.isArray(review.differences) && review.differences.join('; ') || 'Content/style comparison was uncertain or malformed');
 } else report.checks.push('Local vision compared actual source and generated content and styling');
 await json(path.join(verificationDir, 'generic-report.json'), report);
 if (!review.passed) process.exitCode = 1;
