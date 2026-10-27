@@ -2,7 +2,7 @@
 
 Watch a YouTube tutorial become a working local result. SkillWalk reads a tutorial's captions and sampled frames, prepares a plan with local Gemma, then runs supported workflows, browser checks and bounded repairs.
 
-**Approve once, then watch.** The three featured examples and pasted URLs use the same source analysis, capability selection and verification pipeline. The catalog supplies examples, not execution rules keyed to video IDs. There is no paid model API, account requirement or automatic deployment.
+**Approve once, then watch.** The three featured examples use vetted execution recipes. Other YouTube URLs enter a separate experimental source-analysis and execution pipeline, without per-video rules. There is no paid model API, account requirement or automatic deployment.
 
 SkillWalk uses local Gemma models to follow tutorials. Results depend on the tutorial’s tools, available materials, and your computer. Tutorials using compatible local tools may work more reliably. Tutorials demonstrating other models or services may require adaptations that change the result. SkillWalk will check compatibility before starting.
 
@@ -44,7 +44,7 @@ Setup builds `skillwalk-document:local` and prepares the version-matched, hash-v
 
 ## Use SkillWalk
 
-1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Every video enters the shared source analysis; compatibility is decided from required capabilities after analysis.
+1. Start with the document tutorial, choose an alternative, or paste a YouTube link. Preview and confirm the video. Featured videos use their reviewed demonstration flow; unfamiliar videos are assessed from their actual source requirements.
 2. Watch the source analysis, then review the plan, supplied sample and model differences. No writing or content upload is required for the demonstration.
 3. The execution overview has a disclosed ten-second approval countdown with **Pause** and **Start now**. Leaving, hiding or reloading this view pauses approval.
 4. After approval, execution continues without another required click, including if the viewer disconnects. Follow the actual browser activity, checks and repairs.
@@ -52,11 +52,11 @@ Setup builds `skillwalk-document:local` and prepares the version-matched, hash-v
 
 **Stop** prevents subsequent steps after the current operation finishes safely, including delivery after a final check. A request after completion returns an explicit already-finished response. Failed or interrupted runs are labelled; they do not become verified results.
 
-Historical presentation runs retain their optional direction window and saved outputs. New runs use the shared source contract. Inline edits produce a separate copy that has **not** been re-tested.
+Featured presentation runs retain their optional direction window and saved outputs. Unfamiliar videos use the experimental source contract. Inline edits produce a separate copy that has **not** been re-tested.
 
-## Shared source pipeline
+## Experimental unfamiliar-tutorial pipeline
 
-Every URL uses captions, nine uniformly sampled frames, offline OCR and local vision. Public GitHub or CodePen source linked by the creator can supplement that evidence; inaccessible links are recorded, not bypassed. GitHub material is pinned and hashed. Downloaded source is untrusted data and is never executed on the host.
+Unfamiliar URLs use captions, nine uniformly sampled frames, offline OCR and local vision. Public GitHub or CodePen source linked by the creator can supplement that evidence; inaccessible links are recorded, not bypassed. GitHub material is pinned and hashed. Downloaded source is untrusted data and is never executed on the host.
 
 Local Gemma extracts source-cited requirements, operations, literal content, CSS assertions and interactions. A finite capability check selects standalone offline HTML/CSS/JavaScript or the full isolated multimodal document adapter. Unknown services, credentials and unsupported operations remain explicit compatibility failures. Document configuration comes from the source; its Python implementation is the audited reusable adapter.
 

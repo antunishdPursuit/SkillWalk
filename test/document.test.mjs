@@ -118,3 +118,8 @@ test('chart answer cannot pass just by mentioning the expected number while deny
  assert.equal(checkDocumentAnswer(0,{answer:'I do not know the population. A value of 80 million is shown.',evidence}),false);
  assert.equal(checkDocumentAnswer(0,{answer:'Germany has approximately 80 million people. I do not know the year.',evidence}),true);
 });
+
+test('featured recipes and unfamiliar execution have explicit separate routes',()=>{
+ for(const entry of tutorials){const route=compatibilityFor(entry.id);assert.equal(route.kind,entry.kind);assert.equal(route.pipeline,'featured-v1');assert.equal(route.featured,true);}
+ const route=compatibilityFor('abcdefghijk');assert.equal(route.kind,'generic');assert.equal(route.pipeline,'shared-v1');assert.equal(route.featured,false);
+});
