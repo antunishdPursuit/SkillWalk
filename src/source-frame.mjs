@@ -22,3 +22,13 @@ export function cropIsArtifact(review) {
   return review?.containsEditor===false && review?.containsBrowserToolbar===false &&
     review?.pageReadable===true && review?.uncertain===false;
 }
+
+export function applyArtifactObservation(observation, review) {
+  if (!cropIsArtifact(review) || typeof review.artifactAppearance !== 'string' ||
+      !review.artifactAppearance.trim() || !Array.isArray(review.artifactText) ||
+      review.artifactText.some(text => typeof text !== 'string')) return observation;
+  // Full-frame descriptions can describe editor chrome instead of the page.
+  // Keep transcribed source code, but ground rendered styling in the actual crop.
+  return {...observation, view:'artifact', visibleText:review.artifactText,
+    appearance:review.artifactAppearance, uncertainty:''};
+}

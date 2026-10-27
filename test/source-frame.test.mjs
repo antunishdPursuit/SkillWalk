@@ -18,3 +18,12 @@ test('content evidence uses cropped page OCR rather than editor chrome',()=>{
   const evidence=frameEvidence({id:'v1',timestamp:1,view:'mixed',ocr:'Close tab Ask Gemini line 12',visibleText:['wrong editor text'],artifactOCR:'Click me\nHello',code:'<p>Hello</p>',appearance:'white page',artifactVerified:true});
   assert.equal(evidence.artifactText,'Click me\nHello');assert.equal(JSON.stringify(evidence).includes('Ask Gemini'),false);
 });
+
+import {applyArtifactObservation} from '../src/source-frame.mjs';
+test('verified crop styling replaces conflicting full-frame chrome without losing source code',()=>{
+ const whole={view:'mixed',appearance:'Dark editor',visibleText:['file.js'],code:'button code',uncertainty:'mixed'};
+ const crop={containsEditor:false,containsBrowserToolbar:false,pageReadable:true,uncertain:false,artifactAppearance:'White page, dark text; number below two buttons',artifactText:['+1','-1','3']};
+ const result=applyArtifactObservation(whole,crop);assert.equal(result.appearance,crop.artifactAppearance);assert.deepEqual(result.visibleText,crop.artifactText);assert.equal(result.code,whole.code);
+ assert.equal(applyArtifactObservation(whole,{...crop,containsEditor:true}),whole);
+ assert.equal(applyArtifactObservation(whole,{...crop,artifactAppearance:''}),whole);
+});
