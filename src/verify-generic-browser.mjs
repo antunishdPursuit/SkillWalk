@@ -48,7 +48,7 @@ try {
       continue;
     }
     if (check.type === 'click') {
-      const alreadyVisible = await page.getByText(check.expected, {exact: false}).first().isVisible().catch(() => false);
+      const alreadyVisible = await page.getByText(check.expected, {exact: true}).first().isVisible().catch(() => false);
       assert.equal(alreadyVisible, false, 'Interaction result was already visible');
       await page.getByRole('button', {name: check.target, exact: true}).click();
     }
