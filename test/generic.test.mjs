@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateGenericPlan} from '../src/generic-proof.mjs';
+import {genericPlanSchema, validateGenericPlan} from '../src/generic-proof.mjs';
 
 const segments = [{id: 's0', start: 3, text: 'Create a page titled Example and show a button.'}];
 
@@ -39,4 +39,29 @@ test('unsupported interactive plans retain their explicit incompatibility', () =
     requirements: [{description: 'Backend', available: false, segment_id: 's0', quote: 'Create a page'}],
     steps: [], checks: []};
   assert.deepEqual(validateGenericPlan(plan, segments), []);
+});
+
+test('planner schema restricts every citation to source IDs and omits model-authored quotes', () => {
+  const schema = genericPlanSchema(['s0', 'f1', 's0']);
+  assert.equal(schema.additionalProperties, false);
+  for (const field of ['requirements', 'steps', 'checks']) {
+    const item = schema.properties[field].items;
+    assert.equal(item.additionalProperties, false);
+    assert.deepEqual(item.properties.segment_id.enum, ['s0', 'f1']);
+    assert.equal(Object.hasOwn(item.properties, 'quote'), false);
+  }
+  assert.throws(() => genericPlanSchema([]), /Source IDs/);
+});
+
+test('validation replaces any supplied quotation with canonical evidence', () => {
+  const plan = {supported: true, interactive: false, summary: 'A page',
+    requirements: [{description: 'Page', available: true, segment_id: 's0', quote: 'invented'}],
+    steps: [{action: 'Build', segment_id: 's0', quote: 'invented'}],
+    checks: [{type: 'visible', target: '', expected: 'Example', segment_id: 's0', quote: 'invented'}]};
+  assert.deepEqual(validateGenericPlan(plan, segments), []);
+  for (const entry of [plan.requirements[0], plan.steps[0], plan.checks[0]]) {
+    assert.equal(entry.quote, segments[0].text);
+    assert.equal(entry.sourceKind, 'caption');
+  }
+  assert.notDeepEqual(validateGenericPlan({...plan, checks: [{...plan.checks[0], segment_id: 'N/A'}]}, segments), []);
 });
