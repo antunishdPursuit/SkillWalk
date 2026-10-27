@@ -52,6 +52,7 @@ export class GenericRun extends DocumentRun {
   }
 
   async execute() {
+    this.activateModelProfile();
     if (this.kind === 'document') return super.execute();
     this.stopping = false;
     this.failure = null;
@@ -103,5 +104,19 @@ export class GenericRun extends DocumentRun {
     if (result.code !== 0) throw Error(result.error || 'Document source requirements or styling did not match');
   }
 
-  async retry() { return this.kind === 'document' ? super.retry() : this.execute(); }
+  activateModelProfile() {
+    this.models = {text:this.modelEnvironment.GEMMA_TEXT_MODEL, vision:this.modelEnvironment.GEMMA_MODEL};
+    this.event('state', {status:this.status, stage:this.stage, kind:this.kind,
+      execution:this.view().execution, message:'New work uses the current local model profile; recorded evidence is unchanged.'});
+  }
+
+  async retry() {
+    this.activateModelProfile();
+    return this.kind === 'document' ? super.retry() : this.execute();
+  }
+
+  async openApp() {
+    this.activateModelProfile();
+    return super.openApp();
+  }
 }
