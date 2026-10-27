@@ -9,7 +9,8 @@ let executions = 0;
 class ControlledRun extends GenericRun {
   async analyze() {
     this.plan = {supported: true, summary: 'Controlled source-derived HTML task', steps: [
-      {action: 'Create a local checklist', timestamp: 12, quote: 'Add a checklist'}
+      {action: 'Create a local checklist', timestamp: 12, quote: 'Add a checklist', sourceKind: 'caption'},
+      {action: 'Arrange checklist controls', timestamp: 24, quote: 'A checklist beside a button', sourceKind: 'frame-observation'}
     ]};
     // This is the actual generic brief shape: it has neither slides nor kind.
     this.demoBrief = {title: 'Controlled checklist'};
@@ -44,6 +45,8 @@ try {
   assert.equal(await page.locator('#customize').isVisible(), false);
   assert.equal(await page.locator('#run-now').isEnabled(), true);
   assert.doesNotMatch(await page.locator('#execution-page').innerText(), /Cover previews/);
+  assert.match(await page.locator('#plan li').nth(0).textContent(), /Video caption 0:12/);
+  assert.match(await page.locator('#plan li').nth(1).textContent(), /Model interpretation of video frame 0:24/);
   // Reconnect before approval pauses; approval then needs no form/style input.
   assert.equal(executions, 0);
   await page.locator('#run-now').click();
